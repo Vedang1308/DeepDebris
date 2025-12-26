@@ -29,10 +29,10 @@ backend/.mvn/wrapper/maven-wrapper.properties
 .DS_Store
 
 # Data
-ml-service/iss_history.json
-ml-service/X_train.pt
-ml-service/y_train.pt
-ml-service/residual_model.pth
+# ml-service/iss_history.json <-- Included
+# ml-service/X_train.pt       <-- Included
+# ml-service/y_train.pt       <-- Included
+# ml-service/residual_model.pth <-- Included
 
 # Streamlit
 .streamlit/
