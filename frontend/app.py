@@ -323,3 +323,38 @@ if st.button("🚀 Step 3: Run Prediction (Next 3 Orbits)"):
 
 else:
     st.info("Click 'Predict Trajectory' to see the visualization.")
+
+# --- 4. OrbitGPT Section ---
+st.markdown("---")
+st.header("🤖 OrbitGPT: Flight Dynamics Assistant")
+
+# Initialize Chat History
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Display Chat
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Chat Input
+if prompt := st.chat_input("Ask OrbitGPT (e.g., 'Summarize high risk alerts')..."):
+    # User Message
+    st.chat_message("user").markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    # AI Response
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        full_response = ""
+        
+        try:
+            with st.spinner("Analyzing CDMs..."):
+                # Call RAG Endpoint
+                resp = requests.post("http://localhost:8000/chat", json={"query": prompt})
+                full_response = resp.json().get("response", "Error: No response from OrbitGPT")
+        except Exception as e:
+            full_response = f"Error connecting to OrbitGPT: {e}"
+            
+        message_placeholder.markdown(full_response)
+        st.session_state.messages.append({"role": "assistant", "content": full_response})

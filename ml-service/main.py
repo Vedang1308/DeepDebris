@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from propagator import Propagator
 from weather_service import WeatherService
+from cdm_service import CDMService
+from rag_engine import OrbitGPTEngine
 from datetime import datetime, timedelta
 import numpy as np
 import requests
@@ -13,6 +15,15 @@ load_dotenv("../.env") # Load from root
 app = FastAPI()
 propagator = Propagator()
 weather_service = WeatherService()
+cdm_service = CDMService()
+# Initialize OrbitGPT (Ingest on startup for demo)
+orbit_gpt = OrbitGPTEngine(cdm_service)
+print("Ingesting initial CDMs...")
+orbit_gpt.ingest_cdms()
+print("OrbitGPT Ready.")
+
+class ChatRequest(BaseModel):
+    query: str
 
 SPACETRACK_USER = os.getenv("SPACETRACK_USER")
 SPACETRACK_PASSWORD = os.getenv("SPACETRACK_PASSWORD")
@@ -28,7 +39,11 @@ try:
 except Exception as e:
     print(f"Warning: Model not found or error loading: {e}")
 
-    print(f"Warning: Model not found or error loading: {e}")
+@app.post("/chat")
+def chat_with_orbitgpt(request: ChatRequest):
+    """Ask OrbitGPT a question based on retrieved CDMs."""
+    response = orbit_gpt.ask(request.query)
+    return {"response": response}
 
 @app.get("/weather/live")
 def get_live_weather():
