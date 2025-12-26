@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from propagator import Propagator
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import requests
 import os
@@ -37,14 +37,21 @@ def get_latest_tle(norad_id: int):
             login_url = "https://www.space-track.org/ajaxauth/login"
             query = f"https://www.space-track.org/basicspacedata/query/class/tle_latest/NORAD_CAT_ID/{norad_id}/orderby/ORDINAL desc/format/json"
             
-            payload = {
-                "identity": SPACETRACK_USER,
-                "password": SPACETRACK_PASSWORD,
-                "query": query
-            }
+            # Use Session for cookie persistence (Required by Space-Track)
+            session = requests.Session()
             
-            # Post credentials and query
-            resp = requests.post(login_url, data=payload)
+            # 1. Login
+            resp = session.post(login_url, data={
+                "identity": SPACETRACK_USER,
+                "password": SPACETRACK_PASSWORD
+            })
+            
+            if resp.status_code != 200:
+                print(f"Login failed: {resp.status_code}")
+                raise Exception("Login failed")
+
+            # 2. Query Data
+            resp = session.get(query)
             
             if resp.status_code == 200:
                 data = resp.json()
@@ -88,6 +95,54 @@ class TleRequest(BaseModel):
 
 @app.post("/predict")
 def predict_orbit(request: TleRequest):
+    return _predict_single(request)
+
+class BatchRequest(BaseModel):
+    line1: str
+    line2: str
+    start_time: str
+    minutes_duration: int
+    step_minutes: int
+    solar_flux: float
+    kp_index: float
+
+@app.post("/predict_batch")
+def predict_batch(request: BatchRequest):
+    """Efficiently predict a sequence of points."""
+    try:
+        start_dt = datetime.fromisoformat(request.start_time)
+        steps = int(request.minutes_duration / request.step_minutes)
+        timestamps = [start_dt + timedelta(minutes=i*request.step_minutes) for i in range(steps)]
+        
+        results = []
+        for ts in timestamps:
+            # Re-use logic (refactored slightly for speed?)
+            # Just calling internal function to avoid HTTP overhead
+            pos_physics = propagator.get_position(request.line1, request.line2, ts)
+            
+            input_tensor = torch.tensor([[
+                request.solar_flux, 
+                request.kp_index, 
+                pos_physics[0], 
+                pos_physics[1], 
+                pos_physics[2]
+            ]], dtype=torch.float32)
+            
+            with torch.no_grad():
+                correction = model(input_tensor).numpy()[0]
+                
+            final_pos = pos_physics + correction
+            results.append({
+                "ts": ts.isoformat(),
+                "x": float(final_pos[0]), "y": float(final_pos[1]), "z": float(final_pos[2]),
+                "physics_x": float(pos_physics[0]), "physics_y": float(pos_physics[1]), "physics_z": float(pos_physics[2])
+            })
+            
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+def _predict_single(request: TleRequest):
     try:
         # 1. Physics Prediction (SGP4)
         pos_physics = propagator.get_position(request.line1, request.line2, request.target_time)
