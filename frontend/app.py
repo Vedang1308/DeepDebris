@@ -89,7 +89,19 @@ if 'scenario' not in st.session_state: st.session_state['scenario'] = "Custom"
 def update_weather_scenario():
     """Callback to update Flux/Kp based on Scenario"""
     scen = st.session_state['scenario']
-    if scen == "Quiet Sun (Default)":
+    
+    if scen == "Live NOAA Data (Real-Time)":
+        try:
+            with st.spinner("Fetching live NOAA data..."):
+                resp = requests.get("http://localhost:8000/weather/live")
+                data = resp.json()
+                st.session_state['flux'] = data['flux']
+                st.session_state['kp'] = data['kp']
+                st.toast(f"Updated from NOAA: Flux={data['flux']}, Kp={data['kp']}")
+        except Exception as e:
+            st.error(f"NOAA Fetch Failed: {e}")
+            
+    elif scen == "Quiet Sun (Default)":
         st.session_state['flux'] = 70.0
         st.session_state['kp'] = 1.0
     elif scen == "Moderate Storm":
@@ -108,7 +120,7 @@ def reset_defaults():
 # Scenario Selector
 st.sidebar.selectbox(
     "Weather Scenario",
-    ["Custom", "Quiet Sun (Default)", "Moderate Storm", "Extreme Storm (The Problem)"],
+    ["Custom", "Live NOAA Data (Real-Time)", "Quiet Sun (Default)", "Moderate Storm", "Extreme Storm (The Problem)"],
     key="scenario",
     on_change=update_weather_scenario,
     help="Select a preset to see how weather affects the orbit."

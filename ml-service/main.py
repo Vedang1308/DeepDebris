@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from propagator import Propagator
+from weather_service import WeatherService
 from datetime import datetime, timedelta
 import numpy as np
 import requests
@@ -11,6 +12,7 @@ load_dotenv("../.env") # Load from root
 
 app = FastAPI()
 propagator = Propagator()
+weather_service = WeatherService()
 
 SPACETRACK_USER = os.getenv("SPACETRACK_USER")
 SPACETRACK_PASSWORD = os.getenv("SPACETRACK_PASSWORD")
@@ -25,6 +27,13 @@ try:
     model.eval()
 except Exception as e:
     print(f"Warning: Model not found or error loading: {e}")
+
+    print(f"Warning: Model not found or error loading: {e}")
+
+@app.get("/weather/live")
+def get_live_weather():
+    """Fetch real-time space weather from NOAA."""
+    return weather_service.get_live_weather()
 
 @app.get("/tle/{norad_id}")
 def get_latest_tle(norad_id: int):
