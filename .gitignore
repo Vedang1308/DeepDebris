@@ -1,0 +1,38 @@
+# Environment Variables
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Docker
+.docker/
+
+# Java / Maven
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.properties
+*.jar
+*.war
+*.ear
+*.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Data
+ml-service/iss_history.json
+ml-service/X_train.pt
+ml-service/y_train.pt
+ml-service/residual_model.pth
+
+# Streamlit
+.streamlit/
