@@ -48,7 +48,77 @@ def refresh_data_cache():
     """Run via Scheduler: Keep the 'Live State' fresh for the user."""
     print("[Scheduler] Running background data refresh...")
     try:
-        # Refetch CDMs for context
+        # 1. Fetch Latest TLEs and Train (Continuous Learning)
+        # We focus on ISS (25544) for this demo
+        nid = 25544
+        nid_str = str(nid)
+        
+        # Check if we have a previous TLE in cache to compare against
+        prev_tle = None
+        if nid_str in TLE_CACHE:
+            prev_tle = TLE_CACHE[nid_str]
+        
+        # Force a "Live Check" - logic similar to get_latest_tle but specifically looking for updates
+        # We reuse get_latest_tle logic implicitly by calling it or copying relevant parts?
+        # Better: Let's extract TLE fetching into a helper or just do it here for the scheduler.
+        # Ideally, we want to see if Space-Track has a NEWER one than what we have.
+        
+        # We'll use get_latest_tle to update the cache.
+        # But get_latest_tle returns cached if fresh. We want to FORCE check for training.
+        # Actually, get_latest_tle respects CACHE_DURATION.
+        # If we reduce cache duration or force fetch...
+        
+        # Let's trust get_latest_tle's logic for now, but maybe we need a dedicated "check_for_updates"
+        # For simplicity in this demo:
+        # We will assume this scheduler runs less frequently than TLE updates (6 hours).
+        # So essentially every time it runs, it's likely there is a new TLE if we force fetch.
+        
+        # Let's peek at Space-Track directly here to get "Current" vs "Previous"
+        if SPACETRACK_USER and SPACETRACK_PASSWORD:
+             session = requests.Session()
+             login_url = "https://www.space-track.org/ajaxauth/login"
+             # Fetch LAST 2 TLEs
+             query = f"https://www.space-track.org/basicspacedata/query/class/tle/NORAD_CAT_ID/{nid}/orderby/EPOCH desc/limit/2/format/json"
+             
+             resp = session.post(login_url, data={"identity": SPACETRACK_USER, "password": SPACETRACK_PASSWORD})
+             if resp.status_code == 200:
+                 resp = session.get(query)
+                 if resp.status_code == 200:
+                     data = resp.json()
+                     if len(data) >= 2:
+                         curr = data[0]
+                         prev = data[1]
+                         
+                         # Check if 'curr' is newer than 'prev' (it should be)
+                         # And if we haven't trained on this pair yet?
+                         # For now, just train on the latest pair found.
+                         # This is "Online Learning" on the latest available transition.
+                         
+                         current_tle_dict = {
+                            "line1": curr["TLE_LINE1"],
+                            "line2": curr["TLE_LINE2"],
+                            "epoch": curr["EPOCH"]
+                         }
+                         prev_tle_dict = {
+                            "line1": prev["TLE_LINE1"],
+                            "line2": prev["TLE_LINE2"],
+                            "epoch": prev["EPOCH"]
+                         }
+                         
+                         print(f"[Continuous Learning] Found 2 recent TLEs. Training on transition...")
+                         learner.train_on_single_step(prev_tle_dict, current_tle_dict)
+                         
+                         # Update Cache with latest
+                         TLE_CACHE[nid_str] = {
+                             "line1": curr["TLE_LINE1"],
+                             "line2": curr["TLE_LINE2"],
+                             "name": curr["OBJECT_NAME"],
+                             "epoch": curr["EPOCH"],
+                             "source": "SPACE-TRACK-LIVE",
+                             "timestamp": time.time()
+                         }
+
+        # 2. Refetch CDMs for context
         cdm_service.fetch_recent_cdms(25544) 
         # Ingest into RAG so the Agent allows knows the latest risks
         orbit_gpt.ingest_cdms()
@@ -71,15 +141,19 @@ SPACETRACK_USER = os.getenv("SPACETRACK_USER")
 SPACETRACK_PASSWORD = os.getenv("SPACETRACK_PASSWORD")
 
 from model.residual_net import ResidualCorrectionNet
+from continuous_learner import ContinuousLearner
 import torch
 
 # Load model
 model = ResidualCorrectionNet()
 try:
     model.load_state_dict(torch.load("residual_model.pth"))
-    model.eval()
+    model.eval() # Default to eval mode
 except Exception as e:
     print(f"Warning: Model not found or error loading: {e}")
+
+# Initialize Continuous Learner
+learner = ContinuousLearner(model)
 
 @app.post("/chat")
 def chat_with_orbitgpt(request: ChatRequest):
