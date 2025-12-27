@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepDebris 2.0 | Mission Control</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Global Error Handler -->
+    <script>
+        window.addEventListener('error', function (e) {
+            const box = document.getElementById('error-box') || document.createElement('div');
+            box.id = 'error-box';
+            box.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:9999;padding:10px;font-family:monospace;';
+            box.innerText = 'JS Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+            document.body.appendChild(box);
+            console.error(e);
+        });
+    </script>
+
+    <!-- Import Map (Using esm.sh for better generated bundles) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://esm.sh/three@0.160.0",
+                "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/5.0.0/satellite.min.js"></script>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- HUD Overlay -->
+    <div id="ui-layer">
+        <header>
+            <h1>🚀 DeepDebris <span class="badge">LIVE</span></h1>
+            <div class="stats">
+                <div class="stat-box">
+                    <span class="label">ALTITUDE</span>
+                    <span class="value" id="alt-val">408 km</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">VELOCITY</span>
+                    <span class="value" id="vel-val">7.66 km/s</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">F10.7 FLUX</span>
+                    <span class="value" id="flux-val">150 sfu</span>
+                </div>
+            </div>
+        </header>
+
+        <aside class="controls">
+            <h3>Mission Control</h3>
+
+            <div class="control-group">
+                <label>Target Satellite <i class="fas fa-info-circle"
+                        title="Select a satellite to track its real-time position."></i></label>
+                <div style="display: flex; gap: 5px;">
+                    <select id="sat-selector">
+                        <option value="25544">ISS (ZARYA)</option>
+                        <option value="20580">HUBBLE SPACE TELESCOPE</option>
+                        <option value="CUSTOM">Custom TLE</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- TLE Inputs -->
+            <div class="control-group">
+                <label>Two-Line Element Set (TLE)</label>
+                <input type="text" id="tle1" class="input-text" placeholder="Line 1">
+                <input type="text" id="tle2" class="input-text" placeholder="Line 2">
+                <button id="btn-fetch-tle" class="action-btn" style="margin-top: 5px;"><i class="fas fa-download"></i>
+                    Fetch Latest TLE</button>
+            </div>
+
+            <div class="control-group">
+                <label>Space Weather Scenario</label>
+                <select id="weather-scenario">
+                    <option value="LIVE">🛰️ Live NOAA Data</option>
+                    <option value="MINIMUM">Solar Minimum (F10.7=65, Kp=0)</option>
+                    <option value="QUIET">Quiet (F10.7=70, Kp=1)</option>
+                    <option value="NORMAL" selected>Normal (F10.7=150, Kp=3)</option>
+                    <option value="MINOR">Minor Storm (F10.7=180, Kp=5)</option>
+                    <option value="STORM">Major Storm (F10.7=300, Kp=7)</option>
+                    <option value="EXTREME">Extreme Event (F10.7=400, Kp=9)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <div class="slider-row">
+                    <label>F10.7 Solar Flux <i class="fas fa-sun"
+                            title="Standard measure of Solar Activity. Higher flux = More atmospheric drag on the satellite."></i>
+                        : <span id="flux-disp">150</span></label>
+                    <input type="range" id="flux-slider" min="50" max="300" value="150"
+                        oninput="document.getElementById('flux-disp').innerText = this.value">
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="slider-row">
+                    <label>Kp Index <i class="fas fa-magnet"
+                            title="Geomagnetic Activity Index. Ranges 0-9. Higher Kp = More atmospheric disturbance."></i>
+                        : <span id="kp-disp">3.0</span></label>
+                    <input type="range" id="kp-slider" min="0" max="9" step="0.1" value="3.0"
+                        oninput="document.getElementById('kp-disp').innerText = this.value">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Visualization Mode <i class="fas fa-eye"
+                        title="Live = Real-time tracking. Predict = Fast-forward simulation to see orbit path."></i></label>
+                <div class="toggle-group">
+                    <button id="btn-live" class="active"><i class="fas fa-satellite-dish"></i> Live</button>
+                    <button id="btn-sim"><i class="fas fa-forward"></i> Predict</button>
+                </div>
+            </div>
+
+            <div id="status-msg">System Online</div>
+
+            <!-- Legend Removed from Sidebar -->
+    </div>
+    </aside>
+    </div>
+
+    <!-- OrbitGPT Chat Widget -->
+    <div id="chat-widget">
+        <div class="chat-header">
+            <span><i class="fas fa-robot"></i> OrbitGPT AI</span>
+            <button id="chat-toggle"><i class="fas fa-chevron-down"></i></button>
+        </div>
+        <div class="chat-body" id="chat-history">
+            <div class="msg ai">Hello! I am monitoring the satellite trajectory. Ask me about collision risks or orbit
+                parameters.</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Ask OrbitGPT...">
+            <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Floating Legend (Moved to Main View) -->
+    <div id="main-legend" style="
+        position: fixed; top: 100px; right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 8px;
+        color: white;
+        z-index: 1050;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        backdrop-filter: blur(5px);
+        max-width: 250px;
+    ">
+        <h3 style="margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #aaa; letter-spacing: 1px;">
+            Orbit Key</h3>
+        <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px;">
+            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                    style="display:inline-block; width:12px; height:12px; background: magenta; margin-right: 8px; border-radius: 50%;"></span>
+                Target (Physics)</li>
+            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                    style="display:inline-block; width:12px; height:12px; background: cyan; margin-right: 8px; border-radius: 50%;"></span>
+                Prediction (AI)</li>
+            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                    style="display:inline-block; width:12px; height:12px; background: yellow; margin-right: 8px; border-radius: 50%;"></span>
+                Debris (Tracked)</li>
+            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                    style="display:inline-block; width:12px; height:12px; background: lime; margin-right: 8px; border-radius: 50%;"></span>
+                Collision Path</li>
+        </ul>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

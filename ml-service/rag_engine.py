@@ -77,10 +77,16 @@ class OrbitGPTEngine:
         )
         
         try:
+            # Check if DB has data
+            if self.vector_db._collection.count() == 0:
+                print("Vector DB empty. Ingesting global fallback...")
+                self.ingest_cdms(sat_id=25544) # Try Default
+
             result = qa_chain.invoke({"query": query})
             return result["result"]
         except Exception as e:
-            return f"OrbitGPT Error: {e} (Is Ollama running?)"
+            print(f"OrbitGPT Query Error: {e}")
+            return "I am currently unable to access the risk database. (Is Ollama running locally?)"
 
 if __name__ == "__main__":
     from cdm_service import CDMService

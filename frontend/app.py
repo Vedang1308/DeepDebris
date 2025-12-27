@@ -28,6 +28,10 @@ We use AI to **learn** from past storms. By combining standard physics with a Ne
 st.sidebar.title("🎮 Control Panel")
 
 st.sidebar.header("Step 1: Choose Target 🛰️")
+
+# --- GLOBAL SETTINGS (Moved to top for visibility) ---
+st.sidebar.markdown("---")
+
 data_source = st.sidebar.radio("Data Source", ["Manual Input", "Live Space-Track Data"], label_visibility="collapsed")
 
 if data_source == "Live Space-Track Data":
@@ -148,12 +152,8 @@ st.sidebar.button("↺ Reset to Default", on_click=reset_defaults)
 
 if st.button("🚀 Step 3: Run Prediction (Next 3 Orbits)"):
     # Generate points for 3 orbits (~270 mins) with high resolution (3 min steps)
-    # Total = 90 points -> Smooth curve
     
     progress_bar = st.progress(0)
-    
-    points_physics = []
-    points_corrected = []
     
     payload = {
         "line1": tle_line1,
@@ -171,17 +171,24 @@ if st.button("🚀 Step 3: Run Prediction (Next 3 Orbits)"):
             response.raise_for_status()
             batch_data = response.json()
             
-            for pt in batch_data:
-                points_physics.append({
-                    "x": pt["physics_x"], "y": pt["physics_y"], "z": pt["physics_z"]
-                })
-                points_corrected.append({
-                    "x": pt["x"], "y": pt["y"], "z": pt["z"]
-                })
+            # Store in Session State
+            st.session_state['prediction_data'] = batch_data
+            st.session_state['sat_choice'] = sat_choice # Persist name too
                 
         progress_bar.progress(100)
     except Exception as e:
         st.error(f"Error fetching prediction: {e}")
+
+# Check if data exists in Session State to render
+if 'prediction_data' in st.session_state and st.session_state['prediction_data']:
+    batch_data = st.session_state['prediction_data']
+    
+    # Reconstruct lists from state
+    points_physics = []
+    points_corrected = []
+    for pt in batch_data:
+        points_physics.append({"x": pt["physics_x"], "y": pt["physics_y"], "z": pt["physics_z"]})
+        points_corrected.append({"x": pt["x"], "y": pt["y"], "z": pt["z"]})
 
     # Plotly 3D Visualization
     import plotly.graph_objects as go
@@ -218,33 +225,237 @@ if st.button("🚀 Step 3: Run Prediction (Next 3 Orbits)"):
         hovertemplate="<b>Current Position</b><br>%{x:.1f}, %{y:.1f}, %{z:.1f} km<extra></extra>"
     ))
 
-    # Earth (Simple Sphere wireframe or surface)
-    r_earth = 6371 # km
+    # --- 3. Uncertainty Ellipsoid (Visual Polish) ---
     
-    # Create a sphere mesh
-    phi = np.linspace(0, 2*np.pi, 50)
-    theta = np.linspace(0, np.pi, 50)
+    # --- REALISTIC EARTH (Texture Mapping Fix) ---
+    r_earth = 6371
+    
+    # 1. Load Earth Image
+    from PIL import Image
+    import numpy as np
+    
+    @st.cache_data
+    def load_texture(filepath):
+        try:
+            img = Image.open(filepath)
+            return img
+        except:
+            return None
+
+    img_raw = load_texture("assets/earth.jpg")
+    
+    # Use proper resolution for the texture
+    N_PHI = 200
+    N_THETA = 100
+    
+    if img_raw:
+        img_resized = img_raw.resize((N_PHI, N_THETA))
+        img_gray = img_resized.convert('L')
+        surface_color = np.array(img_gray)
+        
+        # Colorscale: Dark Blue -> Blue -> Green -> Brown -> White
+        earth_colorscale = [
+            [0.0, 'rgb(0,0,20)'], 
+            [0.2, 'rgb(0,0,100)'],
+            [0.4, 'rgb(0,100,50)'], 
+            [0.5, 'rgb(150,150,100)'], 
+            [1.0, 'rgb(255,255,255)']
+        ]
+    else:
+        surface_color = np.zeros((N_THETA, N_PHI))
+        earth_colorscale = 'Viridis'
+
+    # 2. Sphere Mesh
+    phi = np.linspace(0, 2*np.pi, N_PHI)
+    theta = np.linspace(0, np.pi, N_THETA)
     phi, theta = np.meshgrid(phi, theta)
     
     x_earth = r_earth * np.cos(phi) * np.sin(theta)
     y_earth = r_earth * np.sin(phi) * np.sin(theta)
     z_earth = r_earth * np.cos(theta)
-    
-    # Add Earth Surface (Semi-Transparent)
+
     fig.add_trace(go.Surface(
         x=x_earth, y=y_earth, z=z_earth,
-        colorscale='Earth',
+        surfacecolor=surface_color,
+        colorscale=earth_colorscale,
         showscale=False,
-        opacity=0.8, # Make Earth transparent to see lines behind it
-        lighting=dict(ambient=0.4, diffuse=0.5, roughness=0.9, specular=0.1),
+        opacity=1.0,
+        lighting=dict(ambient=0.4, diffuse=0.6, specular=0.1, roughness=0.5),
         name='Earth'
     ))
+
+    # --- STARFIELD ---
+    import random
+    r_stars = 30000 
+    star_x = [random.uniform(-r_stars, r_stars) for _ in range(500)]
+    star_y = [random.uniform(-r_stars, r_stars) for _ in range(500)]
+    star_z = [random.uniform(-r_stars, r_stars) for _ in range(500)]
+
+    fig.add_trace(go.Scatter3d(
+        x=star_x, y=star_y, z=star_z,
+        mode='markers',
+        marker=dict(size=2, color='white', opacity=0.8),
+        hoverinfo='none',
+        name='Stars'
+    ))
+
+    # --- ANIMATION FRAMES (Client-Side / No Blinking) ---
+    # Instead of a Python loop, we build frames for Plotly JS to play.
     
-    # --- 3. Uncertainty Ellipsoid ---
-    # Visualize a semi-transparent sphere/ellipsoid around the tip of the prediction
-    # to represent the confidence interval (e.g., +/- 10km)
+    frames = []
+    # Subsample points for performance (every 2nd point)
+    anim_points = points_corrected[::2] 
     
-    # Generate sphere points
+    for k, pt in enumerate(anim_points):
+        frames.append(go.Frame(
+            data=[
+                go.Scatter3d(x=[pt['x']], y=[pt['y']], z=[pt['z']]) # Updates Trace 2 (Marker)
+            ],
+            traces=[2], # IMPORTANT: Only update the 3rd trace (Index 2)
+            name=f"frame{k}",
+            layout=go.Layout(title_text=f"Time: {pt.get('ts', 'N/A')}")
+        ))
+    
+    # --- VISUALIZATION CONTROLS ---
+    st.markdown("### 🎮 Simulation Mode")
+    mode_cols = st.columns([2, 1, 1])
+    with mode_cols[0]:
+        sim_mode = st.radio(
+            "Select Mode:", 
+            ["🔮 Prediction Preview (Fast)", "🔴 Live Real-Time (1x)"], 
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+    
+    real_time_tracking = "Live" in sim_mode
+
+    # --- SIMULATION BUTTON (Client-Side) ---
+    # Only show the "Play" button if we are NOT in Real-Time mode (to avoid conflicts)
+    if not real_time_tracking:
+        fig.update_layout(
+            updatemenus=[dict(
+                type="buttons",
+                showactive=False,
+                y=0.1, x=0.1, xanchor="right", yanchor="top",
+                buttons=[dict(
+                    label="▶ Fast-Forward Orbit",
+                    method="animate",
+                    args=[None, dict(frame=dict(duration=100, redraw=True), fromcurrent=True)]
+                )]
+            )]
+        )
+    else:
+        # In real-time mode, remove the play button
+        fig.update_layout(updatemenus=[])
+
+    # --- METRICS & LAYOUT ---
+    diff = np.sqrt(
+        (phys_df['x'] - corr_df['x'])**2 + 
+        (phys_df['y'] - corr_df['y'])**2 + 
+        (phys_df['z'] - corr_df['z'])**2
+    )
+    max_correction_km = diff.max()
+    avg_correction_km = diff.mean()
+
+    # UI Layout
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Max Correction Applied", f"{max_correction_km:.2f} km", delta="AI Impact")
+    with col2:
+        st.metric("Avg Deviation from Physics", f"{avg_correction_km:.2f} km")
+    with col3:
+        st.metric("Prediction Window", "4.5 Hours", "Forward Prop")
+
+    fig.update_layout(
+        template="plotly_dark",
+        scene=dict(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            zaxis=dict(visible=False),
+            aspectmode='data'
+        ),
+        margin=dict(r=0, b=0, l=0, t=50),
+        legend=dict(
+            yanchor="top", y=0.95, 
+            xanchor="left", x=0.02,
+            bgcolor="rgba(0,0,0,0.5)",
+            font=dict(color="white", size=14)
+        ),
+        title=dict(
+            text=f"Orbit Visualization: {sat_choice} ({'Real-Time' if real_time_tracking else 'Prediction View'})",
+            y=0.9, x=0.5, xanchor='center', yanchor='top'
+        )
+    )
+
+    # --- RENDERING LOGIC ---
+    # We use st.rerun() for the Real-Time loop to avoid 'DuplicateElementKey' errors 
+    # and to ensure the camera state is preserved via the stable key.
+    
+    if real_time_tracking:
+        from datetime import datetime, timezone
+        import time
+        
+        # Helper to parse Start Time from data
+        try:
+            start_ts_str = points_corrected[0]['ts'].replace('Z', '+00:00')
+            start_ts = datetime.fromisoformat(start_ts_str)
+        except:
+            start_ts = datetime.now(timezone.utc)
+
+        # 1. Get Time
+        now = datetime.now(timezone.utc)
+        
+        # 2. Find Index with Interpolation
+        seconds_per_step = 3 * 60 # 180s
+        elapsed_seconds = (now - start_ts).total_seconds()
+        
+        # Base index
+        idx = int(elapsed_seconds / seconds_per_step)
+        
+        # Fraction for interpolation
+        alpha = (elapsed_seconds % seconds_per_step) / seconds_per_step
+        
+        # Cyclic Logic
+        idx = idx % len(points_corrected)
+        next_idx = (idx + 1) % len(points_corrected)
+        
+        p1 = points_corrected[idx]
+        p2 = points_corrected[next_idx]
+        
+        # Linear Interpolation (LERP)
+        curr_pt = {
+            'x': p1['x'] * (1 - alpha) + p2['x'] * alpha,
+            'y': p1['y'] * (1 - alpha) + p2['y'] * alpha,
+            'z': p1['z'] * (1 - alpha) + p2['z'] * alpha
+        }
+        
+        # Clone figure for this frame
+        fig_rt = go.Figure(fig)
+        
+        # Update Marker (Trace 2)
+        fig_rt.data[2].x = [curr_pt['x']]
+        fig_rt.data[2].y = [curr_pt['y']]
+        fig_rt.data[2].z = [curr_pt['z']]
+        
+        # Update Title
+        fig_rt.layout.title.text = f"LIVE TRACKING | {sat_choice} | {now.strftime('%H:%M:%S UTC')}"
+        
+        # Preserve State
+        fig_rt.update_layout(uirevision="RealTimeLock")
+        
+        # RENDER with STABLE KEY
+        st.plotly_chart(fig_rt, use_container_width=True, key="live_chart_stable")
+        
+        # Loop via Rerun
+        time.sleep(1.0)
+        st.rerun()
+            
+    else:
+        # Static Rendering (with Play Button enabled)
+        st.plotly_chart(fig, use_container_width=True, key="static_chart_stable")
+        st.caption("ℹ️ **Mode: Prediction View**. Use the **'▶ Fast-Forward Orbit'** button above to preview the path.")
+
+    # --- Metrics & Details ---
     u = np.linspace(0, 2 * np.pi, 20)
     v = np.linspace(0, np.pi, 20)
     radius = 40.0 # 40km uncertainty radius (example)
@@ -283,17 +494,14 @@ if st.button("🚀 Step 3: Run Prediction (Next 3 Orbits)"):
         st.metric("Prediction Window", "3 Days", "Forward Prop")
 
     fig.update_layout(
+        template="plotly_dark",
         scene=dict(
-            xaxis_title='X (km) - Vernal Equinox',
-            yaxis_title='Y (km)',
-            zaxis_title='Z (km) - North Pole',
-            aspectmode='data', # Important to keep sphere spherical
-            # Make the background look like space
-            xaxis=dict(backgroundcolor="#0e1117", gridcolor="#262730", showbackground=True),
-            yaxis=dict(backgroundcolor="#0e1117", gridcolor="#262730", showbackground=True),
-            zaxis=dict(backgroundcolor="#0e1117", gridcolor="#262730", showbackground=True),
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            zaxis=dict(visible=False),
+            aspectmode='data' # Important to keep sphere spherical
         ),
-        margin=dict(r=0, b=0, l=0, t=0),
+        margin=dict(r=0, b=0, l=0, t=50),
         legend=dict(
             yanchor="top", y=0.95, 
             xanchor="left", x=0.02,
@@ -301,12 +509,12 @@ if st.button("🚀 Step 3: Run Prediction (Next 3 Orbits)"):
             font=dict(color="white", size=14)
         ),
         title=dict(
-            text=f"Orbit Visualization: {sat_choice} (Epoch: {st.session_state.get('source_info', 'N/A').split('|')[1].strip() if 'source_info' in st.session_state else 'N/A'})",
+            text=f"Orbit Visualization: {sat_choice}",
             y=0.9, x=0.5, xanchor='center', yanchor='top'
         )
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # REMOVED: Redundant static chart render was deleted here to prevent "2 Graphs" bug.
     
     with st.expander("ℹ️ Technical Details (Click to Expand)"):
         st.markdown(f"""

@@ -1,0 +1,507 @@
+INFO:     Will watch for changes in these directories: ['/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [96429] using WatchFiles
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:15: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-huggingface package and should be used instead. To use it run `pip install -U :class:`~langchain-huggingface` and import as `from :class:`~langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embedding_fn = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:18: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-chroma package and should be used instead. To use it run `pip install -U :class:`~langchain-chroma` and import as `from :class:`~langchain_chroma import Chroma``.
+  self.vector_db = Chroma(
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:25: LangChainDeprecationWarning: The class `Ollama` was deprecated in LangChain 0.3.1 and will be removed in 1.0.0. An updated version of the class exists in the :class:`~langchain-ollama package and should be used instead. To use it run `pip install -U :class:`~langchain-ollama` and import as `from :class:`~langchain_ollama import OllamaLLM``.
+  self.llm = Ollama(model="llama3")
+INFO:     Started server process [96431]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+LOGGED IN to Space-Track for CDM Service
+Ingesting initial CDMs...
+Fetching fresh CDMs...
+Fetching CDMs from: https://www.space-track.org/basicspacedata/query/class/cdm_public/SAT_1_ID/25544/orderby/TCA desc/limit/5/emptyresult/show
+No alerts for this specific satellite. Fetching GLOBAL HIGH RISK ALERTS...
+Ingested 5 CDMs into OrbitGPT Knowledge Base.
+OrbitGPT Ready.
+Adaptive Scheduler Started: Background refresh every 6 hours.
+INFO:     127.0.0.1:54259 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54259 - "GET /css/style.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54260 - "GET /js/main.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54265 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54266 - "GET /js/main.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54265 - "GET /css/style.css HTTP/1.1" 304 Not Modified
+Skipping point 2025-12-27 04:38:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:39:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:40:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:41:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:42:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:43:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:44:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:45:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:46:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:47:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:48:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:49:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:50:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:51:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:52:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:53:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:54:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:55:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:56:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:57:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:58:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:59:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:00:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:01:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:02:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:03:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:04:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:05:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:06:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:07:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:08:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:09:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:10:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:11:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:12:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:13:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:14:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:15:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:16:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:17:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:18:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:19:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:20:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:21:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:22:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:23:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:24:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:25:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:26:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:27:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:28:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:29:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:30:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:31:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:32:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:33:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:34:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:35:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:36:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:37:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:38:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:39:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:40:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:41:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:42:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:43:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:44:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:45:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:46:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:47:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:48:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:49:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:50:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:51:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:52:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:53:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:54:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:55:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:56:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:57:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:58:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:59:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:00:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+INFO:     127.0.0.1:54266 - "GET /risks HTTP/1.1" 200 OK
+Skipping point 2025-12-27 06:01:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:02:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:03:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:04:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:05:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:06:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:07:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:08:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:09:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:10:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:11:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:12:58.124000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+INFO:     127.0.0.1:54265 - "POST /predict_batch HTTP/1.1" 400 Bad Request
+Returning Cached TLE for 25544 (Age: 4s)
+INFO:     127.0.0.1:54265 - "GET /tle/25544 HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 4s)
+INFO:     127.0.0.1:54266 - "GET /tle/20580 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54265 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 4s)
+INFO:     127.0.0.1:54268 - "GET /tle/27436 HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 4s)
+INFO:     127.0.0.1:54268 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 4s)
+INFO:     127.0.0.1:54268 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54266 - "POST /predict_batch HTTP/1.1" 200 OK
+Skipping point 2025-12-27 04:38:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:39:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:40:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:41:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:42:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:43:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:44:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:45:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:46:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:47:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:48:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:49:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:50:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:51:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:52:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:53:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:54:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:55:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:56:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:57:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:58:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:59:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:00:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:01:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:02:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:03:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:04:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:05:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:06:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:07:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:08:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:09:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:10:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:11:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:12:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:13:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:14:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:15:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:16:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:17:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:18:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:19:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:20:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:21:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:22:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:23:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:24:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:25:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:26:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:27:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:28:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:29:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:30:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:31:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:32:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:33:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:34:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:35:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:36:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:37:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:38:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:39:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:40:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:41:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:42:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:43:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:44:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:45:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:46:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:47:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:48:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:49:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:50:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:51:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:52:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:53:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:54:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:55:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:56:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:57:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:58:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:59:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:00:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:01:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:02:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:03:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:04:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:05:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:06:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:07:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:08:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:09:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:10:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:11:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:12:59.053000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+INFO:     127.0.0.1:54259 - "GET /risks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54260 - "POST /predict_batch HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54260 - "GET /assets/earth.jpg HTTP/1.1" 304 Not Modified
+Returning Cached TLE for 20580 (Age: 8s)
+INFO:     127.0.0.1:54259 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 25544 (Age: 8s)
+INFO:     127.0.0.1:54260 - "GET /tle/25544 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 8s)
+INFO:     127.0.0.1:54260 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54270 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 8s)
+INFO:     127.0.0.1:54270 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 8s)
+INFO:     127.0.0.1:54270 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54259 - "POST /predict_batch HTTP/1.1" 200 OK
+Returning Cached TLE for 25544 (Age: 95s)
+INFO:     127.0.0.1:54294 - "GET /tle/25544 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54296 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 95s)
+INFO:     127.0.0.1:54296 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 95s)
+INFO:     127.0.0.1:54296 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54294 - "POST /predict_batch HTTP/1.1" 200 OK
+Returning Cached TLE for 25544 (Age: 95s)
+INFO:     127.0.0.1:54294 - "GET /tle/25544 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54296 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 95s)
+INFO:     127.0.0.1:54296 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 95s)
+INFO:     127.0.0.1:54296 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54294 - "POST /predict_batch HTTP/1.1" 200 OK
+Skipping point 2025-12-27 04:42:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:43:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:44:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:45:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:46:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:47:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:48:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:49:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:50:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:51:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:52:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:53:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:54:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:55:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:56:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:57:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:58:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:59:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:00:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:01:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:02:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:03:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:04:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:05:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:06:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:07:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:08:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:09:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:10:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:11:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:12:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:13:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:14:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:15:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:16:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:17:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:18:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:19:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:20:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:21:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:22:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:23:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:24:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:25:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:26:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:27:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:28:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:29:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:30:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:31:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:32:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:33:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:34:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:35:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:36:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:37:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:38:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:39:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:40:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:41:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:42:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:43:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:44:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:45:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:46:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:47:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:48:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:49:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:50:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:51:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:52:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:53:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:54:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:55:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:56:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:57:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:58:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:59:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:00:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:01:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:02:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:03:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:04:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+INFO:     127.0.0.1:54340 - "GET /risks HTTP/1.1" 200 OK
+Skipping point 2025-12-27 06:05:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:06:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:07:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:08:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:09:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:10:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:11:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:12:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:13:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:14:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:15:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:16:15.181000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+INFO:     127.0.0.1:54339 - "POST /predict_batch HTTP/1.1" 400 Bad Request
+Returning Cached TLE for 25544 (Age: 201s)
+INFO:     127.0.0.1:54339 - "GET /tle/25544 HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 201s)
+INFO:     127.0.0.1:54339 - "GET /tle/20580 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54340 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54346 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 201s)
+INFO:     127.0.0.1:54347 - "GET /tle/27436 HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 201s)
+INFO:     127.0.0.1:54346 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 201s)
+INFO:     127.0.0.1:54346 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54339 - "POST /predict_batch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54350 - "GET / HTTP/1.1" 304 Not Modified
+Skipping point 2025-12-27 04:42:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:43:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:44:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:45:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:46:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:47:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:48:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:49:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:50:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:51:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:52:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:53:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:54:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:55:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:56:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:57:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:58:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 04:59:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:00:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:01:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:02:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:03:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:04:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:05:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:06:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:07:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:08:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:09:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:10:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:11:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:12:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:13:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:14:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:15:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:16:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:17:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:18:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:19:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:20:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:21:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:22:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:23:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:24:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:25:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:26:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:27:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:28:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:29:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:30:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:31:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:32:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:33:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:34:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:35:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:36:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:37:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:38:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:39:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:40:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:41:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:42:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:43:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:44:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:45:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:46:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:47:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:48:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:49:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:50:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:51:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:52:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:53:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:54:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:55:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:56:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:57:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:58:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:59:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:00:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:01:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:02:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:03:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:04:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:05:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:06:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:07:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:08:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:09:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:10:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:11:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:12:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:13:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:14:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:15:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:16:21.441000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+INFO:     127.0.0.1:54352 - "GET /risks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54350 - "POST /predict_batch HTTP/1.1" 400 Bad Request
+Returning Cached TLE for 25544 (Age: 207s)
+INFO:     127.0.0.1:54350 - "GET /tle/25544 HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 207s)
+INFO:     127.0.0.1:54350 - "GET /tle/20580 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54354 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 207s)
+Returning Cached TLE for 20580 (Age: 207s)
+INFO:     127.0.0.1:54350 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54354 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 207s)
+INFO:     127.0.0.1:54350 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54352 - "POST /predict_batch HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 210s)
+INFO:     127.0.0.1:54352 - "GET /tle/20580 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54350 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 210s)
+INFO:     127.0.0.1:54350 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 210s)
+INFO:     127.0.0.1:54350 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54352 - "POST /predict_batch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54360 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 220s)
+INFO:     127.0.0.1:54360 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 220s)
+INFO:     127.0.0.1:54360 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54359 - "POST /predict_batch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54362 - "GET /weather/live HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54362 - "POST /predict_batch HTTP/1.1" 200 OK
+Returning Cached TLE for 25544 (Age: 240s)
+INFO:     127.0.0.1:54376 - "GET /tle/25544 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54378 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 240s)
+INFO:     127.0.0.1:54378 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 240s)
+INFO:     127.0.0.1:54378 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54376 - "POST /predict_batch HTTP/1.1" 200 OK
