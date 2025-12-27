@@ -123,13 +123,36 @@ def resume_training(checkpoint_path, total_timesteps=1_000_000, device="auto"):
     return model
 
 
+def find_latest_checkpoint():
+    """Find the latest checkpoint in the checkpoints directory"""
+    import glob
+    checkpoints = glob.glob("checkpoints/maneuver_agent_*_steps.zip")
+    if not checkpoints:
+        return None
+    
+    # Extract step numbers and find max
+    checkpoint_steps = []
+    for cp in checkpoints:
+        import re
+        match = re.search(r'(\d+)_steps', cp)
+        if match:
+            checkpoint_steps.append((int(match.group(1)), cp))
+    
+    if not checkpoint_steps:
+        return None
+    
+    # Return checkpoint with highest step count
+    latest = max(checkpoint_steps, key=lambda x: x[0])
+    return latest[1]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Resume PPO training from checkpoint")
     parser.add_argument(
         "--checkpoint",
         type=str,
-        required=True,
-        help="Path to checkpoint file (e.g., checkpoints/maneuver_agent_140000_steps.zip)"
+        default=None,
+        help="Path to checkpoint file (default: auto-detect latest)"
     )
     parser.add_argument(
         "--timesteps",
@@ -147,6 +170,18 @@ def main():
     
     args = parser.parse_args()
     
+    # Auto-detect latest checkpoint if not specified
+    checkpoint_path = args.checkpoint
+    if checkpoint_path is None:
+        print("No checkpoint specified, searching for latest...")
+        checkpoint_path = find_latest_checkpoint()
+        if checkpoint_path is None:
+            print("❌ No checkpoints found in checkpoints/ directory")
+            print("Starting fresh training instead...")
+            print("Run: python3 rl/train_maneuver_agent.py")
+            return
+        print(f"✓ Found latest checkpoint: {checkpoint_path}")
+    
     # Create necessary directories
     os.makedirs("models", exist_ok=True)
     os.makedirs("logs/training", exist_ok=True)
@@ -157,7 +192,7 @@ def main():
     
     # Resume training
     resume_training(
-        checkpoint_path=args.checkpoint,
+        checkpoint_path=checkpoint_path,
         total_timesteps=args.timesteps,
         device=args.device
     )
