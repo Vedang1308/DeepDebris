@@ -879,6 +879,7 @@ window.addEventListener('pointerdown', (event) => {
     // Collect Intersectable Objects
     const targets = [earth];
     if (satelliteMesh) targets.push(satelliteMesh);
+    if (ghostMesh && ghostMesh.visible) targets.push(ghostMesh); // Add Ghost
     debrisObjects.forEach(d => targets.push(d.mesh));
 
     // Raycast explicitly against visible objects
@@ -889,21 +890,55 @@ window.addEventListener('pointerdown', (event) => {
         const hit = intersects[0].object;
         let content = "";
 
+        // Helper to formatting coords
+        const formatPos = (p) => `X: ${p.x.toFixed(2)}, Y: ${p.y.toFixed(2)}, Z: ${p.z.toFixed(2)} km`;
+        const formatGeo = (posEci) => {
+            const gmst = satellite.gstime(simulatedTime);
+            const gd = satellite.eciToGeodetic(posEci, gmst);
+            const lat = satellite.degreesLat(gd.latitude);
+            const lon = satellite.degreesLong(gd.longitude);
+            return `Lat: ${lat.toFixed(4)}°, Lon: ${lon.toFixed(4)}°, Alt: ${gd.height.toFixed(2)} km`;
+        };
+
         if (hit === earth) {
             content = "<h3>🌍 PLANET EARTH</h3><p>Status: Habitable</p><p>Radius: 6,371 km</p>";
-        } else if (hit === satelliteMesh) {
-            content = "<h3>🛰️ FOCUS: ISS (ZARYA)</h3><p>Type: Space Station</p><p>Orbit: Low Earth Orbit</p><p>Crew: Active</p>";
+        } else if (hit === satelliteMesh && currentSatrec) {
+            const pv = satellite.propagate(currentSatrec, simulatedTime);
+            if (pv.position) {
+                const geoStr = formatGeo(pv.position);
+                const eciStr = formatPos(pv.position);
+                content = `<h3>🛰️ FOCUS: ISS (ZARYA)</h3><p>Type: Space Station</p><p>${geoStr}</p><p class="mono-small">${eciStr}</p>`;
+            } else {
+                content = "<h3>🛰️ FOCUS: ISS (ZARYA)</h3><p>Orbit Data Unavailable</p>";
+            }
+        } else if (hit === ghostMesh) {
+            // Reverse Transform: Three(x, y, z) -> ECI(x, -z, y)
+            // because toVector3 was (x, z, -y)
+            const v = ghostMesh.position;
+            const eci = { x: v.x, y: -v.z, z: v.y };
+
+            const geoStr = formatGeo(eci);
+            const eciStr = formatPos(eci);
+
+            content = `<h3>🤖 AI PREDICTION (GHOST)</h3><p>Model: ResidualNet + SGP4</p><p>${geoStr}</p><p class="mono-small">${eciStr}</p><p>Status: <span style="color:cyan">OPTIMIZED PATH</span></p>`;
         } else if (hit.userData.id) {
             // Debris
             const d = hit.userData;
-            content = `<h3>☄️ DEBRIS OBJECT: ${d.id}</h3><p>TCA: ${d.tca}</p><p>Risk Level: HIGH</p>`;
+            // Propagate specifically for this debris at current time
+            const pv = satellite.propagate(d.satrec, simulatedTime);
+            let locStr = "";
+            if (pv.position) {
+                locStr = `<p>${formatGeo(pv.position)}</p><p class="mono-small">${formatPos(pv.position)}</p>`;
+            }
+
+            content = `<h3>☄️ DEBRIS OBJECT: ${d.id}</h3><p>Name: ${d.name}</p><p>TCA: ${d.tca}</p>${locStr}<p>Risk Level: HIGH</p>`;
         }
 
         infoBox.innerHTML = content;
         infoBox.style.display = 'block';
 
-        // Auto-hide after 5 seconds
-        setTimeout(() => { infoBox.style.display = 'none'; }, 5000);
+        // Auto-hide after 10 seconds (increased from 5 for readability)
+        setTimeout(() => { infoBox.style.display = 'none'; }, 10000);
     } else {
         // Clicked empty space -> Close info
         infoBox.style.display = 'none';
