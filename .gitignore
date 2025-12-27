@@ -40,8 +40,7 @@ backend/.mvn/wrapper/maven-wrapper.properties
 # RL Training (DeepDebris 3.0)
 ml-service/logs/
 ml-service/models/*.zip
-ml-service/checkpoints/*.zip
-!ml-service/checkpoints/maneuver_agent_140000_steps.zip
+# Checkpoints are included for GPU continuation
 ml-service/*.pth
 ml-service/*.ckpt
 events.out.tfevents.*
