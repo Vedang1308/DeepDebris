@@ -16,7 +16,7 @@ class ResidualBlock(nn.Module):
         return out + residual
 
 class ResidualCorrectionNet(nn.Module):
-    def __init__(self, input_dim=5, hidden_dim=64, output_dim=3):
+    def __init__(self, input_dim=5, hidden_dim=64, output_dim=6): # 3 Mean + 3 LogVar
         super().__init__()
         self.input_layer = nn.Linear(input_dim, hidden_dim)
         self.res_block1 = ResidualBlock(hidden_dim)

@@ -130,8 +130,9 @@ def refresh_data_cache():
 
 # Run every 6 hours (Standard TLE update cycle)
 scheduler.add_job(refresh_data_cache, 'interval', hours=6, timezone=pytz.utc)
-scheduler.start()
-print("Adaptive Scheduler Started: Background refresh every 6 hours.")
+# scheduler.start() # Moved to after all jobs are added
+print("Adaptive Scheduler Configured: Background refresh every 6 hours.")
+
 
 
 class ChatRequest(BaseModel):
@@ -144,16 +145,41 @@ from model.residual_net import ResidualCorrectionNet
 from continuous_learner import ContinuousLearner
 import torch
 
-# Load model
-model = ResidualCorrectionNet()
+# Load Probabilistic Model (6 outputs)
+model = ResidualCorrectionNet(input_dim=5, output_dim=6)
 try:
-    model.load_state_dict(torch.load("residual_model.pth"))
-    model.eval() # Default to eval mode
+    model.load_state_dict(torch.load("residual_model_probabilistic.pth"))
+    model.eval()
+    print("Loaded PROBABILISTIC Residual Model (Mean+Variance).")
 except Exception as e:
     print(f"Warning: Model not found or error loading: {e}")
 
 # Initialize Continuous Learner
+learner = ContinuousLearner(model, model_path="residual_model_probabilistic.pth")
+
+# ... Imports ...
+from screener import MatrixScreener
+
+# ... (Existing Init: Model, Propagator, Weather) ...
+# PROBABILISTIC MODEL LOADED ABOVE
+
+# Initialize Continuous Learner
 learner = ContinuousLearner(model)
+
+# FEATURE 3: Automated Matrix Screener
+print("Initializing Automated Matrix Screener...")
+screener_service = MatrixScreener(propagator, model, protected_sat_id=25544)
+print("Screener Service Ready.")
+
+# Global Alerts Cache (Updated by Screener)
+ACTIVE_ALERTS = []
+
+# --- API ENDPOINTS ---
+
+@app.get("/alerts")
+def get_active_alerts():
+    """Return the latest alerts from the Matrix Screener."""
+    return {"alerts": ACTIVE_ALERTS, "count": len(ACTIVE_ALERTS)}
 
 @app.post("/chat")
 def chat_with_orbitgpt(request: ChatRequest):
@@ -173,8 +199,6 @@ def chat_with_orbitgpt(request: ChatRequest):
                 
                 # 2. Run AI Analysis on Top Risk (Auto-Analyst)
                 # We reuse the logic from analyze_risk but call it internally if needed
-                # For speed, we just note it. Or we can call the function directly if refined.
-                # Let's do a quick check:
                 # context_injection += " DeepDebris AI suggests running a detailed analysis."
         except Exception as e:
             print(f"Context Injection Error: {e}")
@@ -182,25 +206,82 @@ def chat_with_orbitgpt(request: ChatRequest):
     # augment query
     full_query = request.query + context_injection
     
-    response = orbit_gpt.ask(full_query)
-    return {"response": response}
+    try:
+        response = orbit_gpt.ask(full_query)
+        return {"response": response}
+    except Exception as e:
+        print(f"Chat Error: {e}")
+        return {"response": "System Error: The Analyst is currently offline."}
+
+# Schedule Screener Job (Run every 1 minute for demo)
+def run_screener_job():
+    """Background job to screen for collisions."""
+    global ACTIVE_ALERTS
+    print("[Scheduler] Running Auto-Screening...")
+    if not TLE_CACHE:
+        print("[Scheduler] Catalog empty. Skipping screen.")
+        return
+        
+    alerts = screener_service.screen_catalog(TLE_CACHE)
+    ACTIVE_ALERTS = alerts  # Update global cache
+    if alerts:
+        print(f"!!! CRITICAL ALERTS FOUND: {len(alerts)} !!!")
+        for a in alerts:
+            print(f" >> ALERT: {a['debris_name']} (Prob Dist: {a['ai_dist_km']:.2f}km ±{a['uncertainty_km']:.2f})")
+
+
+# Add to Scheduler
+scheduler.add_job(run_screener_job, 'interval', minutes=1)
+# Keep existing refresh job
+scheduler.add_job(refresh_data_cache, 'interval', hours=6) 
+scheduler.start()
 
 @app.get("/weather/live")
 def get_live_weather():
     """Fetch real-time space weather from NOAA."""
     return weather_service.get_live_weather()
 
+@app.get("/debris/catalog")
+def get_debris_catalog(limit: int = 20):
+    """
+    Fetch real debris objects from Space-Track catalog.
+    Returns TLE data for tracked debris in LEO.
+    """
+    try:
+        # Real debris NORAD IDs from major collision events
+        debris_ids = [
+            22403,  # SL-16 DEB  
+            25400,  # COSMOS 2251 DEB
+            33591,  # IRIDIUM 33 DEB
+            37756,  # BREEZE-M DEB
+            40294,  # H-2A DEB
+            41731,  # DELTA 2 DEB
+            43947,  # CZ-4B DEB
+            27436   # COSMOS 2389
+        ]
+        
+        debris_list = []
+        for debris_id in debris_ids[:limit]:
+            try:
+                tle_data = get_latest_tle(debris_id)
+                if tle_data:
+                    debris_list.append({
+                        "id": str(debris_id),
+                        "name": tle_data.get("name", f"DEBRIS-{debris_id}"),
+                        "line1": tle_data["line1"],
+                        "line2": tle_data["line2"]
+                    })
+            except Exception as outer_e:
+                print(f"Skipping debris {debris_id}: {outer_e}")
+                continue
+        
+        return {"debris": debris_list, "count": len(debris_list)}
+    except Exception as e:
+        print(f"Catalog Error: {e}")
+        return {"debris": [], "count": 0, "error": str(e)}
+
 # --- CDM Cache (In-Memory) ---
-CDM_CACHE = {
-    # Seed with last known valid alerts to survive Rate Limits
-    "25544": {
-        "risks": [
-           {"id": "20580", "name": "HUBBLE DEBRIS (CACHED)", "tca": "2025-12-26T12:00:00"},
-           {"id": "27436", "name": "COSMOS 2389 (DEBRIS)", "tca": "2025-12-26T13:00:00"}
-        ],
-        "timestamp": time.time()
-    }
-}
+CDM_CACHE = {}
 
 # ... (omitted) ...
 
@@ -246,37 +327,7 @@ def get_risk_objects():
     return []
 
 # --- TLE Cache (In-Memory) ---
-TLE_CACHE = {
-    # Seed with real CelesTrak data (Dec 2025)
-    "25544": {
-        "line1": "1 25544U 98067A   25360.53473603  .00013978  00000+0  25382-3 0  9997",
-        "line2": "2 25544  51.6320  74.1581 0003231 305.5588  54.5099 15.49844261544995",
-        "name": "ISS (ZARYA)",
-        "source": "CACHE",
-        "timestamp": time.time()
-    },
-    "20580": {
-       "line1": "1 20580U 90037B   25360.76788470  .00006454  00000+0  22008-3 0  9990",
-       "line2": "2 20580  28.4656 176.9921 0002500  38.5953 321.4821 15.28222522762145",
-       "name": "HUBBLE",
-       "source": "CACHE",
-       "timestamp": time.time()
-    },
-    "27436": {
-        "line1": "1 27436U 02026A   25360.81220177  .00000077  00000+0  64169-4 0  9999",
-        "line2": "2 27436  82.9514 296.5678 0046987  22.3021  35.1386 13.75156148183425",
-        "name": "COSMOS 2389",
-        "source": "CACHE", 
-        "timestamp": time.time()
-    },
-    "22403": {
-        "line1": "1 22403U 92093CU  25360.86078755  .00000568  00000+0  35925-3 0  9991",
-        "line2": "2 22403  70.8901 209.0770 0080277  13.0000   7.4431 14.06786769685205", 
-        "name": "SL-16 DEB",
-        "source": "CACHE", 
-        "timestamp": time.time()
-    }
-}
+TLE_CACHE = {}
 CACHE_DURATION = 3600 # 1 hour
 
 @app.get("/tle/{norad_id}")
@@ -375,24 +426,54 @@ def predict_batch(request: BatchRequest):
                 # Just calling internal function to avoid HTTP overhead
                 pos_physics = propagator.get_position(request.line1, request.line2, ts)
                 
+                # Validate physics output
+                if np.any(np.isnan(pos_physics)) or np.any(np.isinf(pos_physics)):
+                    print(f"Skipping point {ts}: Physics propagation returned NaN/Inf")
+                    continue
+                
+                # NORMALIZED INPUTS
                 input_tensor = torch.tensor([[
-                    request.solar_flux, 
-                    request.kp_index, 
-                    pos_physics[0], 
-                    pos_physics[1], 
-                    pos_physics[2]
+                    request.solar_flux / 300.0, 
+                    request.kp_index / 10.0, 
+                    pos_physics[0] / 10000.0, 
+                    pos_physics[1] / 10000.0, 
+                    pos_physics[2] / 10000.0
                 ]], dtype=torch.float32)
                 
                 with torch.no_grad():
-                    # RAW AI OUTPUT: The model is now trained on real historical residuals.
-                    # No manual scaling needed. The network predicts the error in kilometers.
-                    correction = model(input_tensor).numpy()[0]
+                    # Output: 6 values (Mean + LogVar)
+                    output = model(input_tensor).numpy()[0]
+                
+                correction = output[:3]
+                log_var = output[3:]
+                
+                # Validate output for NaN/Inf (untrained model protection)
+                if np.any(np.isnan(correction)) or np.any(np.isinf(correction)):
+                    print(f"Warning: Model output NaN/Inf at {ts}. Using zero correction.")
+                    correction = np.zeros(3)
+                    
+                if np.any(np.isnan(log_var)) or np.any(np.isinf(log_var)):
+                    log_var = np.full(3, -5.0)  # Small uncertainty
+                
+                std_dev = np.sqrt(np.exp(np.clip(log_var, -10, 10)))  # Clip to prevent overflow
+                uncert = float(np.linalg.norm(std_dev))
+                
+                # Validate uncertainty
+                if np.isnan(uncert) or np.isinf(uncert):
+                    uncert = 10.0  # Default 10km uncertainty
                     
                 final_pos = pos_physics + correction
+                
+                # Final validation before JSON
+                if np.any(np.isnan(final_pos)) or np.any(np.isinf(final_pos)):
+                    print(f"Skipping point {ts}: Final position is NaN/Inf")
+                    continue
+                
                 results.append({
                     "ts": ts.isoformat(),
                     "x": float(final_pos[0]), "y": float(final_pos[1]), "z": float(final_pos[2]),
-                    "physics_x": float(pos_physics[0]), "physics_y": float(pos_physics[1]), "physics_z": float(pos_physics[2])
+                    "physics_x": float(pos_physics[0]), "physics_y": float(pos_physics[1]), "physics_z": float(pos_physics[2]),
+                    "uncertainty_km": uncert
                 })
             except ValueError as e:
                 # SGP4 Error (e.g. decay). Skip this point but allow others if possible.
@@ -416,18 +497,34 @@ def _predict_single(request: TleRequest):
         # 1. Physics Prediction (SGP4)
         pos_physics = propagator.get_position(request.line1, request.line2, request.target_time)
         
-        # 2. ML Correction
-        # Input: [Flux, Kp, X, Y, Z]
+        # 2. ML Correction (Probabilistic)
+        # NORMALIZATION: Flux/300, Kp/10, Pos/10000
         input_tensor = torch.tensor([[
-            request.solar_flux, 
-            request.kp_index, 
-            pos_physics[0], 
-            pos_physics[1], 
-            pos_physics[2]
+            request.solar_flux / 300.0, 
+            request.kp_index / 10.0, 
+            pos_physics[0] / 10000.0, 
+            pos_physics[1] / 10000.0, 
+            pos_physics[2] / 10000.0
         ]], dtype=torch.float32)
         
         with torch.no_grad():
-            correction = model(input_tensor).numpy()[0]
+            output = model(input_tensor).numpy()[0] # [mu_x, mu_y, mu_z, logvar_x, logvar_y, logvar_z]
+            
+        correction = output[:3]
+        log_var = output[3:]
+        
+        # Validate output for NaN/Inf (untrained model protection)
+        if np.any(np.isnan(correction)) or np.any(np.isinf(correction)):
+            print(f"Warning: Model output NaN/Inf. Using zero correction.")
+            correction = np.zeros(3)
+            
+        if np.any(np.isnan(log_var)) or np.any(np.isinf(log_var)):
+            log_var = np.full(3, -5.0)  # Small uncertainty
+        
+        variance = np.exp(np.clip(log_var, -10, 10))  # Clip to prevent overflow
+        std_dev = np.sqrt(variance)
+        
+        uncertainty_scalar = float(np.linalg.norm(std_dev)) # Radius of uncertainty sphere
 
         # 3. Final Prediction
         final_pos = pos_physics + correction
@@ -436,7 +533,8 @@ def _predict_single(request: TleRequest):
             "x": float(final_pos[0]), "y": float(final_pos[1]), "z": float(final_pos[2]),
             "physics_x": float(pos_physics[0]), "physics_y": float(pos_physics[1]), "physics_z": float(pos_physics[2]),
             "correction_x": float(correction[0]), "correction_y": float(correction[1]), "correction_z": float(correction[2]),
-            "source": "HYBRID_PHYSICS_ML"
+            "uncertainty_km": uncertainty_scalar,
+            "source": "HYBRID_PHYSICS_ML_PROBABILISTIC"
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -472,16 +570,30 @@ def analyze_risk(request: RiskAnalysisRequest):
         flux = wx.get('flux', 150.0)
         kp = wx.get('kp', 3.0) 
         
-        # Correct Satellite
-        input_sat = torch.tensor([[flux, kp, sat_pos[0], sat_pos[1], sat_pos[2]]], dtype=torch.float32)
+        # Correct Satellite (normalize inputs, extract only correction)
+        input_sat = torch.tensor([[
+            flux / 300.0,
+            kp / 10.0,
+            sat_pos[0] / 10000.0,
+            sat_pos[1] / 10000.0,
+            sat_pos[2] / 10000.0
+        ]], dtype=torch.float32)
         with torch.no_grad():
-            corr_sat = model(input_sat).numpy()[0]
+            output_sat = model(input_sat).numpy()[0]
+        corr_sat = output_sat[:3]  # Extract only mean correction (first 3 values)
         sat_pos_ai = sat_pos + corr_sat
         
-        # Correct Debris (Assuming same Model applies - generalized)
-        input_deb = torch.tensor([[flux, kp, deb_pos[0], deb_pos[1], deb_pos[2]]], dtype=torch.float32)
+        # Correct Debris
+        input_deb = torch.tensor([[
+            flux / 300.0,
+            kp / 10.0,
+            deb_pos[0] / 10000.0,
+            deb_pos[1] / 10000.0,
+            deb_pos[2] / 10000.0
+        ]], dtype=torch.float32)
         with torch.no_grad():
-            corr_deb = model(input_deb).numpy()[0]
+            output_deb = model(input_deb).numpy()[0]
+        corr_deb = output_deb[:3]  # Extract only mean correction (first 3 values)
         deb_pos_ai = deb_pos + corr_deb
         
         ai_dist = np.linalg.norm(sat_pos_ai - deb_pos_ai)
@@ -511,3 +623,11 @@ def analyze_risk(request: RiskAnalysisRequest):
 
 # Static Files (Mount LAST to avoid masking API routes)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+# Start Server
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+

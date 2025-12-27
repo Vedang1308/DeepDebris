@@ -29,7 +29,8 @@
             }
         }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/5.0.0/satellite.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/5.0.0/satellite.min.js"
+        crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -111,6 +112,61 @@
                 </div>
             </div>
 
+            <!-- SIMULATION MODE PANEL -->
+            <div class="control-group"
+                style="border-top: 2px solid rgba(255, 165, 0, 0.3); padding-top: 15px; margin-top: 15px;">
+                <label style="color: #ff9500; font-weight: bold;">
+                    <i class="fas fa-flask"></i> Simulation Mode
+                    <i class="fas fa-info-circle"
+                        title="Run 'what-if' collision scenarios without affecting live tracking"></i>
+                </label>
+
+                <div class="toggle-group" style="margin-bottom: 10px;">
+                    <button id="btn-mode-live" class="active">
+                        <i class="fas fa-satellite-dish"></i> Live Tracking
+                    </button>
+                    <button id="btn-mode-sim">
+                        <i class="fas fa-flask"></i> Simulation
+                    </button>
+                </div>
+
+                <!-- Simulation Controls (hidden by default) -->
+                <div id="simulation-controls"
+                    style="display: none; margin-top: 10px; padding: 10px; background: rgba(255, 165, 0, 0.1); border-radius: 8px; border: 1px solid rgba(255, 165, 0, 0.3);">
+                    <label style="font-size: 12px; color: #ff9500;">Scenario Type:</label>
+                    <select id="sim-scenario"
+                        style="width: 100%; margin-bottom: 10px; padding: 5px; background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,165,0,0.5); border-radius: 4px;">
+                        <option value="collision">Near-Miss Collision</option>
+                        <option value="maneuver">Avoidance Maneuver</option>
+                        <option value="decay">Orbital Decay</option>
+                        <option value="storm">Solar Storm Impact</option>
+                    </select>
+
+                    <label style="font-size: 12px; color: #ff9500;">Time Offset (hours):</label>
+                    <input type="range" id="sim-time-offset" min="1" max="72" value="24"
+                        style="width: 100%; margin-bottom: 5px;"
+                        oninput="document.getElementById('sim-time-display').innerText = this.value">
+                    <div style="text-align: center; font-size: 11px; color: #aaa; margin-bottom: 10px;">
+                        <span id="sim-time-display">24</span> hours
+                    </div>
+
+                    <button id="btn-run-simulation" class="action-btn"
+                        style="width: 100%; background: linear-gradient(45deg, #ff6b00, #ff9500); margin-bottom: 5px;">
+                        <i class="fas fa-play"></i> Run Simulation
+                    </button>
+
+                    <button id="btn-reset-simulation" class="action-btn"
+                        style="width: 100%; background: linear-gradient(45deg, #666, #888);">
+                        <i class="fas fa-undo"></i> Reset to Live
+                    </button>
+
+                    <div id="sim-status"
+                        style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; font-size: 11px; color: #aaa; text-align: center;">
+                        Ready to simulate
+                    </div>
+                </div>
+            </div>
+
             <div class="control-group">
                 <label>Visualization Mode <i class="fas fa-eye"
                         title="Live = Real-time tracking. Predict = Fast-forward simulation to see orbit path."></i></label>
@@ -140,6 +196,17 @@
         <div class="chat-input-area">
             <input type="text" id="chat-input" placeholder="Ask OrbitGPT...">
             <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Alerts Dashboard (Screener Output) -->
+    <div id="alerts-widget">
+        <div class="chat-header">
+            <span><i class="fas fa-exclamation-triangle"></i> Collision Alerts</span>
+            <button id="alerts-toggle"><i class="fas fa-chevron-down"></i></button>
+        </div>
+        <div class="chat-body" id="alerts-list">
+            <div class="msg ai">No active alerts. System monitoring...</div>
         </div>
     </div>
 

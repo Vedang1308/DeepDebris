@@ -237,7 +237,7 @@ input[type="range"] {
 }
 
 .chat-header {
-    padding: 15px;
+    padding: 12px 15px;
     background: rgba(255, 255, 255, 0.05);
     border-bottom: var(--glass-border);
     border-top-left-radius: 12px;
@@ -247,6 +247,18 @@ input[type="range"] {
     align-items: center;
     font-weight: bold;
     color: var(--neon-blue);
+}
+
+.chat-header span {
+    white-space: nowrap;
+    flex: 1;
+}
+
+.chat-header button {
+    width: auto !important;
+    padding: 4px 8px !important;
+    font-size: 0.9rem;
+    min-width: unset;
 }
 
 .chat-body {
@@ -355,4 +367,48 @@ input[type="range"] {
         /* Above controls if stacked, or adjust via JS */
         height: 300px;
     }
+}
+
+/* Alerts Widget (Similar to Chat) */
+#alerts-widget {
+    position: absolute;
+    bottom: 440px;
+    /* Above chat widget */
+    right: 20px;
+    width: 350px;
+    max-height: 300px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: var(--glass-border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+    transition: max-height 0.3s;
+    z-index: 1999;
+}
+
+#alerts-widget.minimized {
+    max-height: 50px;
+}
+
+#alerts-widget.minimized .chat-body {
+    display: none;
+}
+
+#alerts-widget .chat-header {
+    color: #ff9800;
+    /* Orange for warnings */
+}
+
+#alerts-widget .msg.alert {
+    background: rgba(255, 152, 0, 0.15);
+    border-left: 3px solid #ff9800;
+}
+
+#alerts-widget .msg.critical {
+    background: rgba(255, 0, 0, 0.2);
+    border-left: 3px solid #ff0055;
+    animation: pulse 2s infinite;
 }

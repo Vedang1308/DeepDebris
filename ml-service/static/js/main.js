@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CSS2DRenderer, CSS2DObject } from 'https://esm.sh/three/addons/renderers/CSS2DRenderer.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
@@ -12,15 +12,23 @@ console.log("DeepDebris 2.0 Starting...");
 const scene = new THREE.Scene();
 window.scene = scene; // Expose for debugging
 
-// Camera
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100000); // Far clip for stars
-camera.position.set(12000, 5000, 12000); // View from high altitude
+// Camera - Professional setup
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 10, 200000);
+camera.position.set(15000, 8000, 15000);
 
-// Renderer (WebGL)
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+// Renderer - Production quality
+const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    powerPreference: 'high-performance',
+    precision: 'highp'
+});
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2x for performance
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = false; // Disable for space (no shadows)
+renderer.outputEncoding = THREE.sRGBEncoding;
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 // Renderer (Labels)
@@ -31,16 +39,25 @@ labelRenderer.domElement.style.top = '0px';
 labelRenderer.domElement.style.pointerEvents = 'none'; // Passthrough to allow canvas interaction
 document.body.appendChild(labelRenderer.domElement);
 
-// Controls (Orbit) - Bind to WebGL Canvas
-const controls = new OrbitControls(camera, renderer.domElement); // Bind to canvas underneath
-controls.enableDamping = true; // Smooth momentum
-// ... (controls config) ...
-controls.dampingFactor = 0.05;
+// Controls - Smooth and professional
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08; // Smoother damping
 controls.screenSpacePanning = false;
-controls.minDistance = 6400;
-controls.maxDistance = 50000;
-controls.zoomSpeed = 0.6;
-controls.rotateSpeed = 0.8;
+controls.minDistance = 7000;  // Prevent clipping into Earth
+controls.maxDistance = 80000; // Allow wider view
+controls.zoomSpeed = 1.2;     // Responsive zoom
+controls.rotateSpeed = 0.5;   // Gentle rotation
+controls.panSpeed = 0.8;
+controls.enablePan = true;
+controls.autoRotate = false;
+controls.autoRotateSpeed = 0.5;
+// Smooth zoom with mouse wheel
+controls.mouseButtons = {
+    LEFT: THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN
+};
 
 // ... (Lights & Meshes unchanged) ...
 
@@ -126,12 +143,18 @@ if (weatherSelect) {
     });
 }
 // ...
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // BRIGHTER for visibility
+// Professional lighting setup
+const ambientLight = new THREE.AmbientLight(0x404040, 0.4); // Subtle ambient
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
-sunLight.position.set(50000, 10000, 20000);
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+sunLight.position.set(50000, 20000, 30000);
 scene.add(sunLight);
+
+// Hemisphere light for realistic sky/ground lighting
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+hemiLight.position.set(0, 20000, 0);
+scene.add(hemiLight);
 
 // ... (Existing Three.js Setup) ...
 
@@ -140,8 +163,51 @@ scene.add(sunLight);
 
 // Chat Toggle
 chatToggle.addEventListener('click', () => {
-    document.getElementById('chat-widget').classList.toggle('minimized');
+    const widget = document.getElementById('chat-widget');
+    widget.classList.toggle('minimized');
 });
+
+// Alerts Widget Toggle
+const alertsToggle = document.getElementById('alerts-toggle');
+const alertsWidget = document.getElementById('alerts-widget');
+const alertsList = document.getElementById('alerts-list');
+
+if (alertsToggle) {
+    alertsToggle.addEventListener('click', () => {
+        alertsWidget.classList.toggle('minimized');
+    });
+}
+
+// Fetch and Display Alerts
+async function fetchAlerts() {
+    try {
+        const resp = await fetch('/alerts');
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        if (data.count === 0) {
+            alertsList.innerHTML = '<div class="msg ai">No active alerts. System monitoring...</div>';
+        } else {
+            alertsList.innerHTML = '';
+            data.alerts.forEach(alert => {
+                const div = document.createElement('div');
+                div.className = `msg ${alert.status === 'CRITICAL' ? 'critical' : 'alert'}`;
+                div.innerHTML = `
+                    <strong>${alert.status}:</strong> ${alert.debris_name}<br>
+                    <small>TCA: ${new Date(alert.tca).toLocaleString()}</small><br>
+                    <small>Miss: ${alert.ai_dist_km.toFixed(2)}km ± ${alert.uncertainty_km.toFixed(2)}km</small>
+                `;
+                alertsList.appendChild(div);
+            });
+        }
+    } catch (err) {
+        console.error('Alerts fetch error:', err);
+    }
+}
+
+// Fetch alerts every 30 seconds
+setInterval(fetchAlerts, 30000);
+fetchAlerts(); // Initial fetch
 
 // Send Message
 async function sendMessage() {
@@ -197,17 +263,26 @@ chatInput.addEventListener('keypress', (e) => {
 
 // (Mock TLE Listener Removed)
 
-// --- Earth ---
+// --- Earth - High Quality ---
 const textureLoader = new THREE.TextureLoader();
 const earthRadius = 6371;
-const earthGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
-// Restoration: Use PhongMaterial for realistic lighting
-const earthMat = new THREE.MeshPhongMaterial({
-    map: textureLoader.load('/assets/earth.jpg'),
-    specular: 0x333333,
-    shininess: 5
+
+// High-resolution geometry for smooth sphere
+const earthGeo = new THREE.SphereGeometry(earthRadius, 128, 128);
+
+// Professional Earth material with NASA Blue Marble texture
+const earthMat = new THREE.MeshStandardMaterial({
+    map: textureLoader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'),
+    bumpMap: textureLoader.load('https://unpkg.com/three-globe/example/img/earth-topology.png'),
+    bumpScale: 20,
+    roughness: 0.9,
+    metalness: 0.1,
+    emissive: 0x000000,
+    emissiveIntensity: 0
 });
+
 const earth = new THREE.Mesh(earthGeo, earthMat);
+earth.rotation.y = Math.PI; // Rotate to show correct hemisphere
 scene.add(earth);
 
 
@@ -249,30 +324,70 @@ btnFetch.addEventListener('click', async () => {
     }
 });
 
-// --- Atmosphere Halo (Simple) ---
-const atmoGeo = new THREE.SphereGeometry(earthRadius + 100, 64, 64);
-const atmoMat = new THREE.MeshBasicMaterial({
-    color: 0x4ca6ff,
-    transparent: true,
-    opacity: 0.15,
+// --- Atmosphere - Realistic Glow ---
+const atmoGeo = new THREE.SphereGeometry(earthRadius + 80, 128, 128);
+const atmoMat = new THREE.ShaderMaterial({
+    uniforms: {
+        c: { value: 0.3 },
+        p: { value: 6.5 }
+    },
+    vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform float c;
+        uniform float p;
+        varying vec3 vNormal;
+        void main() {
+            float intensity = pow(c - dot(vNormal, vec3(0.0, 0.0, 1.0)), p);
+            gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+        }
+    `,
     side: THREE.BackSide,
-    blending: THREE.AdditiveBlending
+    blending: THREE.AdditiveBlending,
+    transparent: true
 });
 const atmosphere = new THREE.Mesh(atmoGeo, atmoMat);
 scene.add(atmosphere);
 
-// --- Stars ---
+// --- Stars - Realistic Starfield ---
 function createStars() {
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
-    for (let i = 0; i < 10000; i++) { // More stars
-        const x = THREE.MathUtils.randFloatSpread(200000);
-        const y = THREE.MathUtils.randFloatSpread(200000);
-        const z = THREE.MathUtils.randFloatSpread(200000);
+    const colors = [];
+
+    for (let i = 0; i < 15000; i++) {
+        const x = THREE.MathUtils.randFloatSpread(250000);
+        const y = THREE.MathUtils.randFloatSpread(250000);
+        const z = THREE.MathUtils.randFloatSpread(250000);
         vertices.push(x, y, z);
+
+        // Varied star colors (white, blue-white, yellow-white)
+        const colorVariation = Math.random();
+        if (colorVariation > 0.95) {
+            colors.push(0.7, 0.8, 1.0); // Blue stars
+        } else if (colorVariation > 0.90) {
+            colors.push(1.0, 0.9, 0.7); // Yellow stars
+        } else {
+            colors.push(1.0, 1.0, 1.0); // White stars
+        }
     }
+
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 150 });
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: 120,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.9,
+        sizeAttenuation: true
+    });
+
     const stars = new THREE.Points(geometry, material);
     scene.add(stars);
 }
@@ -285,15 +400,23 @@ const satelliteMesh = new THREE.Mesh(satGeo, satMat);
 scene.add(satelliteMesh);
 
 // --- Ghost Satellite (AI Prediction) ---
-const ghostGeo = new THREE.SphereGeometry(150, 16, 16);
-const ghostMat = new THREE.MeshBasicMaterial({
-    color: 0x00FFFF,
+const ghostGeo = new THREE.SphereGeometry(220, 32, 32); // Larger shell
+const ghostMat = new THREE.MeshStandardMaterial({
+    color: 0x0088FF,      // Solid Azure Blue
+    emissive: 0x0044FF,   // Glow
+    emissiveIntensity: 0.5,
     transparent: true,
-    opacity: 0.4,
-    wireframe: true
+    opacity: 0.8,         // High visibility
+    wireframe: false      // Solid, not wireframe
 });
 const ghostMesh = new THREE.Mesh(ghostGeo, ghostMat);
 scene.add(ghostMesh);
+
+// Correction Vector (Physics -> AI)
+const clGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0)]);
+const clMat = new THREE.LineBasicMaterial({ color: 0xFF3333, linewidth: 2 });
+let correctionLine = new THREE.Line(clGeo, clMat);
+scene.add(correctionLine);
 
 // Ghost Label
 const ghostLabel = createLabel("AI PREDICTION", "warning");
@@ -318,7 +441,7 @@ function updateOrbitPath(satrec) {
     if (orbitLine) scene.remove(orbitLine);
 
     const points = [];
-    const now = new Date();
+    const now = simulatedTime || new Date(); // SYNC with Simulation Time
     // Calculate path for next 95 mins (1 orbit)
     for (let i = 0; i <= 95; i++) {
         const t = new Date(now.getTime() + i * 60000); // +1 min per step
@@ -331,10 +454,10 @@ function updateOrbitPath(satrec) {
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const material = new THREE.LineDashedMaterial({
         color: 0xFF00FF, // Magenta (SGP4 Physics)
-        dashSize: 500, // Larger dashes to be visible
-        gapSize: 300,
-        linewidth: 2,
-        opacity: 0.8,
+        dashSize: 800,   // Longer dashes
+        gapSize: 400,    // Wider gaps
+        linewidth: 3,    // Thicker line
+        opacity: 0.6,    // More transparent
         transparent: true
     });
     orbitLine = new THREE.Line(geometry, material);
@@ -359,15 +482,23 @@ function updateOrbitPath(satrec) {
 // ...
 // predictionLine hoisted
 async function drawPredictionPath(l1, l2) {
-    if (predictionLine) scene.remove(predictionLine);
+    if (predictionLine) {
+        scene.remove(predictionLine);
+        // Clean up uncertainty tube if it exists
+        if (predictionLine.userData && predictionLine.userData.uncertaintyTube) {
+            scene.remove(predictionLine.userData.uncertaintyTube);
+        }
+    }
 
     try {
+        if (!l1 || !l2) return; // Don't predict without TLE
+
         const now = new Date(simulatedTime.getTime()); // Sync with SIMULATION TIME
         const req = {
             line1: l1,
             line2: l2,
             start_time: now.toISOString(),
-            minutes_duration: 95,
+            minutes_duration: 480,
             step_minutes: 1,
             solar_flux: (val => isNaN(val) ? 150 : val)(parseFloat(fluxSlider ? fluxSlider.value : 150)),
             kp_index: (val => isNaN(val) ? 3 : val)(parseFloat(kpSlider ? kpSlider.value : 3))
@@ -378,6 +509,13 @@ async function drawPredictionPath(l1, l2) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(req)
         });
+
+        if (!resp.ok) {
+            const errText = await resp.text();
+            console.error(`API Error ${resp.status}:`, errText);
+            return;
+        }
+
         const data = await resp.json();
 
         if (!Array.isArray(data)) {
@@ -401,11 +539,13 @@ async function drawPredictionPath(l1, l2) {
         geometry.setPositions(positions); // Flat array [x,y,z, x,y,z...]
 
         const material = new LineMaterial({
-            color: 0x00FFFF,
-            linewidth: 5, // Pixels
-            resolution: new THREE.Vector2(window.innerWidth, window.innerHeight), // Needed for screenspace width
-            dashed: false,
-            alphaToCoverage: true, // Anti-aliasing
+            color: 0x00FFFF,      // Cyan (AI Prediction)
+            linewidth: 8,         // Much thicker than physics line
+            resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+            dashed: false,        // Solid line (vs dashed physics)
+            alphaToCoverage: true,
+            opacity: 0.95,        // More opaque
+            transparent: true
         });
 
         predictionLine = new Line2(geometry, material);
@@ -430,17 +570,72 @@ async function drawPredictionPath(l1, l2) {
 }
 
 // --- Debris Visualization (Dynamic) ---
-const debrisObjects = []; // Store { line, mesh, satrec }
+let debrisObjects = []; // Store { line, mesh, satrec }
 // debrisPredictionLine hoisted
 let currentRisks = []; // Store latest risks for button access
 
+// --- Debris Catalog (Background Field) ---
+async function loadDebrisCatalog() {
+    try {
+        const response = await fetch('/debris/catalog?limit=20');
+        const data = await response.json();
+
+        if (data.debris && data.debris.length > 0) {
+            console.log(`Loaded ${data.debris.length} debris objects from catalog.`);
+
+            // Material for background debris
+            const debrisMat = new THREE.MeshBasicMaterial({
+                color: 0x888888,
+                transparent: true,
+                opacity: 0.6
+            });
+            const debrisGeo = new THREE.SphereGeometry(15, 8, 8); // Small dots
+
+            data.debris.forEach(deb => {
+                // Initialize SatRec for propagation
+                const satrec = satellite.twoline2satrec(deb.line1, deb.line2);
+
+                // Create mesh
+                const mesh = new THREE.Mesh(debrisGeo, debrisMat);
+                mesh.userData = {
+                    id: deb.id,
+                    name: deb.name,
+                    line1: deb.line1,
+                    line2: deb.line2,
+                    isCatalog: true,
+                    satrec: satrec // Save to userData too
+                };
+                scene.add(mesh);
+
+                // Push to render loop
+                debrisObjects.push({
+                    mesh: mesh,
+                    id: deb.id,
+                    type: 'catalog',
+                    satrec: satrec
+                });
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load debris catalog:", e);
+    }
+}
+
 async function drawDebrisOrbits() {
-    // Clear old
-    debrisObjects.forEach(obj => {
-        scene.remove(obj.line);
-        scene.remove(obj.mesh);
+    if (!Array.isArray(debrisObjects)) debrisObjects = []; // Safety
+
+    // Clear old RISK lines/meshes (preserve catalog)
+    // Filter out catalog objects from removal list
+    const risksToRemove = debrisObjects.filter(obj => obj.type !== 'catalog');
+    risksToRemove.forEach(obj => {
+        if (obj.line) scene.remove(obj.line);
+        if (obj.mesh) scene.remove(obj.mesh);
+        if (obj.label) scene.remove(obj.label);
     });
-    debrisObjects.length = 0;
+
+    // Keep only catalog objects in the array
+    debrisObjects = debrisObjects.filter(obj => obj.type === 'catalog');
+
     if (debrisPredictionLine) scene.remove(debrisPredictionLine);
 
     try {
@@ -453,7 +648,12 @@ async function drawDebrisOrbits() {
             return;
         }
 
+        const currentSatId = document.getElementById('sat-selector').value;
+
         for (const debris of currentRisks) {
+            // Safety: Don't render "Self-Collision" if backend reports same ID
+            if (debris.id == currentSatId) continue;
+
             try {
                 const tleResp = await fetch(`/tle/${debris.id}`);
                 if (!tleResp.ok) continue;
@@ -461,7 +661,7 @@ async function drawDebrisOrbits() {
                 const satrec = satellite.twoline2satrec(tleData.line1, tleData.line2);
 
                 // Initial Line Draw
-                const material = new THREE.LineBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 1.0 }); // Yellow
+                const material = new THREE.LineBasicMaterial({ color: 0xFFA500, transparent: true, opacity: 1.0 }); // Orange for Risk
                 const geometry = new THREE.BufferGeometry();
                 const line = new THREE.Line(geometry, material);
                 scene.add(line);
@@ -469,7 +669,7 @@ async function drawDebrisOrbits() {
                 // Initial Mesh
                 const mesh = new THREE.Mesh(
                     new THREE.SphereGeometry(80, 8, 8),
-                    new THREE.MeshBasicMaterial({ color: 0xFFFF00 }) // Yellow Match
+                    new THREE.MeshBasicMaterial({ color: 0xFFA500 }) // Orange for Risk
                 );
                 mesh.userData = {
                     satrec: satrec,
@@ -600,7 +800,7 @@ async function drawDebrisPredictionPath(l1, l2) {
             line1: l1,
             line2: l2,
             start_time: now.toISOString(),
-            minutes_duration: 95,
+            minutes_duration: 300,
             step_minutes: 1,
             solar_flux: 150, // Use scenario defaults
             kp_index: 3
@@ -611,18 +811,61 @@ async function drawDebrisPredictionPath(l1, l2) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(req)
         });
+
+        if (!resp.ok) throw new Error('Prediction failed');
         const data = await resp.json();
 
-        const points = [];
+        if (!Array.isArray(data)) {
+            console.error("Prediction data is not an array:", data);
+            return;
+        }
+
+        const positions = [];
+        const uncertainties = []; // Store uncertainty for tube radius
+
         data.forEach(pt => {
-            points.push(toVector3(pt));
+            const v = toVector3({ x: pt.x, y: pt.y, z: pt.z });
+            positions.push(v.x, v.y, v.z);
+            uncertainties.push(pt.uncertainty_km || 0); // Default to 0 if missing
         });
 
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        // Bright Green for Debris Prediction
-        const material = new THREE.LineBasicMaterial({ color: 0x00FF00, linewidth: 3 });
+        // --- CYAN LINE (AI Prediction) ---
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        const material = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
         debrisPredictionLine = new THREE.Line(geometry, material);
         scene.add(debrisPredictionLine);
+
+        // --- UNCERTAINTY TUBE (Probabilistic Visualization) ---
+        // Create a tube around the path with radius = average uncertainty
+        if (data.length > 1 && uncertainties.some(u => u > 0)) {
+            const avgUncertainty = uncertainties.reduce((a, b) => a + b, 0) / uncertainties.length;
+            const tubeRadius = Math.max(avgUncertainty, 10); // Min 10km for visibility
+
+            // Create curve from points
+            const curvePoints = [];
+            for (let i = 0; i < positions.length; i += 3) {
+                curvePoints.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
+            }
+
+            if (curvePoints.length > 1) {
+                const curve = new THREE.CatmullRomCurve3(curvePoints);
+                const tubeGeometry = new THREE.TubeGeometry(curve, 64, tubeRadius, 8, false);
+                const tubeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.15,
+                    side: THREE.DoubleSide
+                });
+                const uncertaintyTube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+                uncertaintyTube.name = 'uncertaintyTube';
+                scene.add(uncertaintyTube);
+
+                // Store reference for cleanup
+                if (!debrisPredictionLine.userData) debrisPredictionLine.userData = {};
+                debrisPredictionLine.userData.uncertaintyTube = uncertaintyTube;
+            }
+        }
         console.log("Debris Prediction Path Drawn");
 
     } catch (err) { console.error("Debris Prediction Error", err); }
@@ -780,6 +1023,7 @@ function animate() {
     // 3. Debris Physics (Dynamic Alignment)
     // Move Markers (Every Frame)
     debrisObjects.forEach(obj => {
+        if (!obj.satrec) return; // Skip invalid objects
         const pv = satellite.propagate(obj.satrec, simulatedTime);
         if (pv.position && !isNaN(pv.position.x)) {
             obj.mesh.position.copy(toVector3(pv.position));
@@ -804,16 +1048,40 @@ function animate() {
 
             ghostMesh.position.copy(toVector3({ x, y, z }));
             ghostMesh.visible = true;
+
+            // Draw Connection Line (Physics -> AI)
+            if (satelliteMesh && correctionLine) {
+                const pSat = satelliteMesh.position;
+                const pGhost = ghostMesh.position;
+                correctionLine.geometry.setFromPoints([pSat, pGhost]);
+                correctionLine.visible = true;
+
+                // Calculate KM offset (Earth Radius 100 units = 6371 km)
+                const distUnits = pSat.distanceTo(pGhost);
+                const distKm = (distUnits / 100.0) * 6371.0;
+
+                ghostLabel.element.innerHTML = `AI PREDICTION<br>Offset: ${distKm.toFixed(1)} km`;
+                ghostLabel.element.style.color = distKm > 50 ? "#ffcc00" : "#00ffff";
+            }
         } else {
             ghostMesh.visible = false; // Hide if out of range
+            if (correctionLine) correctionLine.visible = false;
         }
     }
 
 
-    // Re-calculate Lines (Every ~5 seconds)
-    if (frameCount % 300 === 0 && !isLive) { // Only needed in Sim Mode where drift is fast
+    // Re-calculate Lines (Dynamic Sync)
+    // Update Orbit Line every 5 seconds to prevent "Drift" failure
+    if (frameCount % 300 === 0 && currentSatrec) {
+        // Force update of the Magenta Physics Line to follow the satellite
+        updateOrbitPath(currentSatrec);
+    }
+
+    if (frameCount % 300 === 0 && !isLive) {
         debrisObjects.forEach(obj => {
-            updateDebrisLineGeometry(obj.line, obj.geometry, obj.satrec, simulatedTime);
+            if (obj.line && obj.geometry) {
+                updateDebrisLineGeometry(obj.line, obj.geometry, obj.satrec, simulatedTime);
+            }
         });
     }
 
@@ -843,6 +1111,15 @@ window.addEventListener('load', () => {
         console.log("Auto-Fetching initial TLE...");
         btnFetch.click();
     }
+
+    // Initialize New Features Safely (delayed)
+    setTimeout(() => {
+        try {
+            console.log("Initializing Debris & Simulation...");
+            loadDebrisCatalog();
+            initSimulationListeners();
+        } catch (e) { console.error(e); }
+    }, 1500);
 });
 
 // --- INTERACTIVITY: Raycaster & Info Box ---
@@ -944,3 +1221,196 @@ window.addEventListener('pointerdown', (event) => {
         infoBox.style.display = 'none';
     }
 });
+
+// Load Debris Catalog on startup
+// loadDebrisCatalog();
+
+
+// --- SIMULATION MODE LOGIC (Merged) ---
+let simulationMode = false;
+let activeSimObjects = [];
+
+function initSimulationListeners() {
+    console.log("Initializing Simulation Listeners...");
+
+    const btnSim = document.getElementById('btn-mode-sim');
+    const btnLive = document.getElementById('btn-mode-live');
+    const btnRun = document.getElementById('btn-run-simulation');
+    const btnReset = document.getElementById('btn-reset-simulation');
+
+    if (btnSim) {
+        btnSim.addEventListener('click', () => {
+            simulationMode = true;
+            document.getElementById('simulation-controls').style.display = 'block';
+            toggleLiveMode(false);
+
+            // UI Toggle
+            btnSim.classList.add('active');
+            btnLive.classList.remove('active');
+        });
+    }
+
+    if (btnLive) {
+        btnLive.addEventListener('click', () => {
+            simulationMode = false;
+            document.getElementById('simulation-controls').style.display = 'none';
+            toggleLiveMode(true);
+            clearSimulation();
+
+            // UI Toggle
+            btnLive.classList.add('active');
+            btnSim.classList.remove('active');
+        });
+    }
+
+    if (btnReset) {
+        btnReset.addEventListener('click', () => {
+            clearSimulation();
+            document.getElementById('sim-status').innerText = 'Simulation Reset';
+        });
+    }
+
+    if (btnRun) {
+        btnRun.addEventListener('click', async () => {
+            const scenario = document.getElementById('sim-scenario').value;
+            const hoursVal = document.getElementById('sim-time-offset').value;
+            const hours = parseInt(hoursVal, 10);
+            const tle1 = document.getElementById('tle1').value;
+            const tle2 = document.getElementById('tle2').value;
+
+            if (!tle1 || !tle2) {
+                alert("Please load a satellite TLE first!");
+                return;
+            }
+
+            document.getElementById('sim-status').innerText = `Running: ${scenario.toUpperCase()}...`;
+
+            clearSimulation(); // Clear previous run
+
+            if (scenario === 'collision' || scenario === 'near-miss') {
+                await runCollisionSim(tle1, tle2, hours, scenario === 'collision');
+            } else if (scenario === 'maneuver') {
+                runManeuverSim(hours);
+            } else if (scenario === 'storm') {
+                runStormSim(hours);
+            } else {
+                runDecaySim(hours);
+            }
+        });
+    }
+}
+
+function toggleLiveMode(isLiveMode) {
+    const status = document.getElementById('status-msg');
+    isLive = isLiveMode; // Update global state
+
+    if (isLiveMode) {
+        status.innerText = "System Online - Live Tracking";
+        status.style.color = "#0f0";
+        // Resume animation loop updates
+    } else {
+        status.innerText = "SIMULATION MODE ACTIVE - Live Data Paused";
+        status.style.color = "#ff9500";
+    }
+}
+
+async function runCollisionSim(tle1, tle2, hours, isImpact) {
+    // Check if satellite exists
+    const satrec = satellite.twoline2satrec(tle1, tle2);
+    const targetTime = new Date(Date.now() + hours * 60 * 60 * 1000);
+
+    // Propagate satellite to future time
+    const pv = satellite.propagate(satrec, targetTime);
+    if (!pv.position) {
+        console.error("Propagation failed");
+        return;
+    }
+
+    // Satellite Position (Target)
+    const satPos = pv.position; // {x, y, z} in ECI
+
+    // Debris Position (Impact or Near Miss)
+    // impact: < 1km
+    // near-miss: 50km
+    const offset = isImpact ? 0.5 : 50.0;
+    const debPos = {
+        x: satPos.x + offset,
+        y: satPos.y + (isImpact ? 0 : 30.0),
+        z: satPos.z + (isImpact ? 0 : 40.0)
+    };
+
+    // VISUALIZATION
+    const satVec = toVector3(satPos);
+    const debVec = toVector3(debPos);
+
+    // 1. Draw Simulated Satellite (Ghost) at T+Hours
+    const satGeo = new THREE.SphereGeometry(180, 24, 24); // Larger than before
+    const satMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true, transparent: true, opacity: 0.5 });
+    const satMesh = new THREE.Mesh(satGeo, satMat);
+    satMesh.position.copy(satVec);
+    scene.add(satMesh);
+    activeSimObjects.push(satMesh);
+
+    // 2. Draw Debris Object
+    const debGeo = new THREE.SphereGeometry(isImpact ? 100 : 50, 32, 32);
+    const debMat = new THREE.MeshBasicMaterial({
+        color: isImpact ? 0xff0000 : 0xffa500,
+        wireframe: false
+    });
+    const debMesh = new THREE.Mesh(debGeo, debMat);
+    debMesh.position.copy(debVec);
+    scene.add(debMesh);
+    activeSimObjects.push(debMesh);
+
+    // 3. Draw Trajectory Line (Collision Vector)
+    // Simple line to show path
+    const points = [
+        satVec.clone().add(new THREE.Vector3(-2000, 0, 0)),
+        satVec,
+        debVec,
+        debVec.clone().add(new THREE.Vector3(2000, 500, 500))
+    ];
+    // Use Line2/LineGeometry if possible, else standard Line
+    const curve = new THREE.CatmullRomCurve3(points);
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2, transparent: true, opacity: 0.8 });
+    const line = new THREE.Line(lineGeo, lineMat);
+    scene.add(line);
+    activeSimObjects.push(line);
+
+    // 4. Update Status UI
+    const dist = isImpact ? "0.5 km (IMPACT)" : "58 km";
+    const statusDiv = document.getElementById('sim-status');
+    statusDiv.innerHTML = `
+        <span style="color:${isImpact ? 'red' : 'orange'}">
+        ⚠ RESULT: ${isImpact ? 'DIRECT COLLISION' : 'NEAR MISS'}<br>
+        Separation: ${dist}<br>
+        Time: T+${hours}h
+        </span>
+    `;
+
+    // Look at it
+    camera.position.copy(satVec).add(new THREE.Vector3(200, 200, 500));
+    camera.lookAt(satVec);
+}
+
+function runManeuverSim(hours) {
+    document.getElementById('sim-status').innerText = `Simulating Avoidance Maneuver (Delta-V) at T+${hours}h...`;
+}
+
+function runStormSim(hours) {
+    document.getElementById('sim-status').innerText = `Simulating Solar Storm (Drag x3) for ${hours}h...`;
+}
+
+function runDecaySim(hours) {
+    document.getElementById('sim-status').innerText = `Simulating Orbital Decay over ${hours}h...`;
+}
+
+function clearSimulation() {
+    activeSimObjects.forEach(obj => scene.remove(obj));
+    activeSimObjects = [];
+}
+
+// Start Listeners
+// initSimulationListeners();
+// loadDebrisCatalog();

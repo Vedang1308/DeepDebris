@@ -81,12 +81,12 @@ class CDMService:
         """
         Converts a raw JSON CDM into a natural language summary.
         """
-        # Extract Key Fields (Corrected Keys)
         sat1 = cdm.get("SAT_1_NAME", "Unknown Sat")
         sat2 = cdm.get("SAT_2_NAME", "Unknown Debris")
         tca = cdm.get("TCA", "Unknown Time")
         min_rng = cdm.get("MIN_RNG", "N/A")
         prob = cdm.get("PC", "N/A") # Probability of Collision
+        comment = cdm.get("COMMENT", cdm.get("REMARKS", "No remarks."))
         
         # Parse Time
         try:
@@ -101,7 +101,7 @@ class CDMService:
             f"Time of Closest Approach (TCA) is {readable_time}. "
             f"Minimum Range will be {min_rng} km. "
             f"Probability of Collision is {prob}. "
-            f"Reviewing CDM details: {json.dumps(cdm)}." 
+            f"Remarks: {comment}."
         )
         
         # A more conversational summary for the RAG
@@ -110,6 +110,7 @@ class CDMService:
             f"- TCA: {readable_time}\n"
             f"- Miss Distance: {min_rng} km\n"
             f"- Probability: {prob}\n"
+            f"- Analyst Remarks: {comment}\n"
             f"This event involves {sat2}."
         )
         
