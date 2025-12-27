@@ -441,5 +441,73 @@ def _predict_single(request: TleRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+class RiskAnalysisRequest(BaseModel):
+    sat_id: str
+    debris_id: str
+    tca: str
+
+@app.post("/analyze_risk")
+def analyze_risk(request: RiskAnalysisRequest):
+    """
+    Perform deep analysis of a potential collision.
+    Compare SGP4 (Physics) vs ResidualNet (AI) predictions.
+    """
+    try:
+        # 1. Get TLEs
+        sat_tle = get_latest_tle(int(request.sat_id)) # Auto-caches
+        deb_axis = get_latest_tle(int(request.debris_id))
+        
+        tca_dt = datetime.fromisoformat(request.tca.replace("Z", "+00:00"))
+        
+        # 2. Physics Prediction (SGP4)
+        sat_pos = propagator.get_position(sat_tle['line1'], sat_tle['line2'], tca_dt)
+        deb_pos = propagator.get_position(deb_axis['line1'], deb_axis['line2'], tca_dt)
+        
+        physics_dist = np.linalg.norm(sat_pos - deb_pos)
+        
+        # 3. AI Prediction (Apply Correction)
+        # We need flux/kp. Use defaults or fetch live.
+        wx = weather_service.get_live_weather()
+        # Fix: Match keys from weather_service.py ('flux', 'kp')
+        flux = wx.get('flux', 150.0)
+        kp = wx.get('kp', 3.0) 
+        
+        # Correct Satellite
+        input_sat = torch.tensor([[flux, kp, sat_pos[0], sat_pos[1], sat_pos[2]]], dtype=torch.float32)
+        with torch.no_grad():
+            corr_sat = model(input_sat).numpy()[0]
+        sat_pos_ai = sat_pos + corr_sat
+        
+        # Correct Debris (Assuming same Model applies - generalized)
+        input_deb = torch.tensor([[flux, kp, deb_pos[0], deb_pos[1], deb_pos[2]]], dtype=torch.float32)
+        with torch.no_grad():
+            corr_deb = model(input_deb).numpy()[0]
+        deb_pos_ai = deb_pos + corr_deb
+        
+        ai_dist = np.linalg.norm(sat_pos_ai - deb_pos_ai)
+        
+        # 4. Assessment
+        diff = physics_dist - ai_dist
+        risk_reduction = 0.0
+        if physics_dist > 0:
+            risk_reduction = ((physics_dist - ai_dist) / physics_dist) * 100
+            
+        rec = "MONITOR"
+        if ai_dist < 1.0: rec = "MANEUVER REQUIRED (CRITICAL)"
+        elif ai_dist < 10.0: rec = "HIGH ALERT"
+        elif ai_dist > physics_dist: rec = "FALSE ALARM (AI Cleared)"
+        
+        return {
+            "tca": request.tca,
+            "physics_miss_distance_km": float(physics_dist),
+            "ai_miss_distance_km": float(ai_dist),
+            "risk_reduction_percent": float(risk_reduction),
+            "recommendation": rec
+        }
+        
+    except Exception as e:
+        print(f"Risk Analysis Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Static Files (Mount LAST to avoid masking API routes)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

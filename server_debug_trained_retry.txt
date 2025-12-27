@@ -725,3 +725,194 @@ INFO:     127.0.0.1:54555 - "POST /predict_batch HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54551 - "POST /predict_batch HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54551 - "POST /predict_batch HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54551 - "POST /analyze_risk HTTP/1.1" 405 Method Not Allowed
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [96689]
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:15: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-huggingface package and should be used instead. To use it run `pip install -U :class:`~langchain-huggingface` and import as `from :class:`~langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embedding_fn = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:18: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-chroma package and should be used instead. To use it run `pip install -U :class:`~langchain-chroma` and import as `from :class:`~langchain_chroma import Chroma``.
+  self.vector_db = Chroma(
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:25: LangChainDeprecationWarning: The class `Ollama` was deprecated in LangChain 0.3.1 and will be removed in 1.0.0. An updated version of the class exists in the :class:`~langchain-ollama package and should be used instead. To use it run `pip install -U :class:`~langchain-ollama` and import as `from :class:`~langchain_ollama import OllamaLLM``.
+  self.llm = Ollama(model="llama3")
+INFO:     Started server process [97014]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+LOGGED IN to Space-Track for CDM Service
+Ingesting initial CDMs...
+Fetching fresh CDMs...
+Fetching CDMs from: https://www.space-track.org/basicspacedata/query/class/cdm_public/SAT_1_ID/25544/orderby/TCA desc/limit/5/emptyresult/show
+No alerts for this specific satellite. Fetching GLOBAL HIGH RISK ALERTS...
+Ingested 5 CDMs into OrbitGPT Knowledge Base.
+OrbitGPT Ready.
+Adaptive Scheduler Started: Background refresh every 6 hours.
+[ContinuousLearner] Initialized with LR=0.001
+Returning Cached TLE for 25544 (Age: 6s)
+Returning Cached TLE for 20580 (Age: 6s)
+Risk Analysis Failed: 'solar_flux'
+INFO:     127.0.0.1:54600 - "POST /analyze_risk HTTP/1.1" 500 Internal Server Error
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [97014]
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:15: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-huggingface package and should be used instead. To use it run `pip install -U :class:`~langchain-huggingface` and import as `from :class:`~langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embedding_fn = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:18: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the :class:`~langchain-chroma package and should be used instead. To use it run `pip install -U :class:`~langchain-chroma` and import as `from :class:`~langchain_chroma import Chroma``.
+  self.vector_db = Chroma(
+/Users/vedangavaghade/Desktop/LEO/DeepDebris/ml-service/rag_engine.py:25: LangChainDeprecationWarning: The class `Ollama` was deprecated in LangChain 0.3.1 and will be removed in 1.0.0. An updated version of the class exists in the :class:`~langchain-ollama package and should be used instead. To use it run `pip install -U :class:`~langchain-ollama` and import as `from :class:`~langchain_ollama import OllamaLLM``.
+  self.llm = Ollama(model="llama3")
+INFO:     Started server process [97040]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+LOGGED IN to Space-Track for CDM Service
+Ingesting initial CDMs...
+Fetching fresh CDMs...
+Fetching CDMs from: https://www.space-track.org/basicspacedata/query/class/cdm_public/SAT_1_ID/25544/orderby/TCA desc/limit/5/emptyresult/show
+No alerts for this specific satellite. Fetching GLOBAL HIGH RISK ALERTS...
+Ingested 5 CDMs into OrbitGPT Knowledge Base.
+OrbitGPT Ready.
+Adaptive Scheduler Started: Background refresh every 6 hours.
+[ContinuousLearner] Initialized with LR=0.001
+Returning Cached TLE for 25544 (Age: 0s)
+Returning Cached TLE for 20580 (Age: 0s)
+INFO:     127.0.0.1:54622 - "POST /analyze_risk HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54633 - "GET / HTTP/1.1" 304 Not Modified
+Skipping point 2025-12-27 04:59:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:00:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:01:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:02:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:03:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:04:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:05:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:06:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:07:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:08:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:09:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:10:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:11:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:12:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:13:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:14:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:15:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:16:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:17:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:18:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:19:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:20:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:21:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:22:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:23:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:24:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:25:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:26:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:27:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:28:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:29:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:30:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:31:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:32:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:33:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:34:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:35:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:36:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:37:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:38:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:39:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:40:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:41:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:42:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:43:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:44:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:45:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:46:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:47:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:48:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:49:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:50:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:51:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:52:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:53:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:54:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:55:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:56:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:57:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:58:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 05:59:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:00:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:01:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:02:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:03:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:04:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:05:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:06:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:07:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:08:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:09:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:10:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:11:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:12:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:13:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:14:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:15:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:16:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:17:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:18:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:19:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:20:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:21:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:22:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:23:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:24:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:25:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:26:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:27:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:28:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:29:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:30:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:31:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:32:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+Skipping point 2025-12-27 06:33:06.322000+00:00 due to SGP4 error: SGP4 propagation error code: 2
+INFO:     127.0.0.1:54633 - "POST /predict_batch HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54634 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 25544 (Age: 16s)
+INFO:     127.0.0.1:54634 - "GET /tle/25544 HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 16s)
+INFO:     127.0.0.1:54634 - "GET /tle/20580 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54636 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 16s)
+INFO:     127.0.0.1:54634 - "GET /tle/27436 HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 16s)
+INFO:     127.0.0.1:54634 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 16s)
+INFO:     127.0.0.1:54634 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54633 - "POST /predict_batch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54633 - "POST /predict_batch HTTP/1.1" 200 OK
+Returning Cached TLE for 25544 (Age: 17s)
+Returning Cached TLE for 20580 (Age: 17s)
+INFO:     127.0.0.1:54633 - "POST /analyze_risk HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54643 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 23s)
+INFO:     127.0.0.1:54643 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 23s)
+INFO:     127.0.0.1:54643 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54642 - "POST /predict_batch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54633 - "GET /weather/live HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54633 - "POST /predict_batch HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 24s)
+INFO:     127.0.0.1:54633 - "GET /tle/20580 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54642 - "GET /risks HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 24s)
+INFO:     127.0.0.1:54642 - "GET /tle/20580 HTTP/1.1" 200 OK
+Returning Cached TLE for 27436 (Age: 24s)
+INFO:     127.0.0.1:54642 - "GET /tle/27436 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54633 - "POST /predict_batch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54633 - "POST /predict_batch HTTP/1.1" 200 OK
+Returning Cached TLE for 20580 (Age: 26s)
+Returning Cached TLE for 20580 (Age: 26s)
+INFO:     127.0.0.1:54633 - "POST /analyze_risk HTTP/1.1" 200 OK
