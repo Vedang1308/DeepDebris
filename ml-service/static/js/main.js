@@ -1118,6 +1118,20 @@ window.addEventListener('load', () => {
             console.log("Initializing Debris & Simulation...");
             loadDebrisCatalog();
             initSimulationListeners();
+
+            // DeepDebris 3.0: Initialize Maneuver Planning
+            const btnGenerateManeuver = document.getElementById('btn-generate-maneuver');
+            const btnExecuteManeuver = document.getElementById('execute-maneuver-btn');
+
+            if (btnGenerateManeuver) {
+                btnGenerateManeuver.addEventListener('click', generateManeuverPlan);
+            }
+
+            if (btnExecuteManeuver) {
+                btnExecuteManeuver.addEventListener('click', executeManeuver);
+            }
+
+            console.log("✓ Maneuver Planning UI initialized");
         } catch (e) { console.error(e); }
     }, 1500);
 });

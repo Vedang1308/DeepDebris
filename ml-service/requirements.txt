@@ -33,3 +33,12 @@ typing_extensions==4.15.0
 tzdata==2025.3
 urllib3==2.6.2
 uvicorn==0.39.0
+
+# RL Stack for Autonomous Maneuver Planning
+gymnasium==0.29.1
+stable-baselines3==2.2.1
+
+# NLP Stack (Optional - for OrbitGPT)
+langchain==0.1.0
+openai==1.6.1
+chromadb==0.4.22

@@ -36,3 +36,12 @@ backend/.mvn/wrapper/maven-wrapper.properties
 
 # Streamlit
 .streamlit/
+
+# RL Training (DeepDebris 3.0)
+ml-service/logs/
+ml-service/models/*.zip
+ml-service/checkpoints/*.zip
+!ml-service/checkpoints/maneuver_agent_140000_steps.zip
+ml-service/*.pth
+ml-service/*.ckpt
+events.out.tfevents.*

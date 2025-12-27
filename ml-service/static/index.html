@@ -176,6 +176,57 @@
                 </div>
             </div>
 
+            <!-- DeepDebris 3.0: Autonomous Maneuver Planning -->
+            <div class="control-group"
+                style="border-top: 2px solid rgba(0, 255, 255, 0.3); padding-top: 15px; margin-top: 15px;">
+                <label style="color: #00ffff; font-weight: bold;">
+                    <i class="fas fa-rocket"></i> Autonomous Maneuver Planning
+                    <i class="fas fa-info-circle"
+                        title="AI-powered collision avoidance using Deep Reinforcement Learning"></i>
+                </label>
+
+                <!-- Fuel Gauge -->
+                <div class="fuel-gauge" style="margin: 10px 0;">
+                    <label style="font-size: 12px; color: #aaa;">Fuel Remaining</label>
+                    <div class="gauge-bar"
+                        style="width: 100%; height: 20px; background: rgba(0,0,0,0.5); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+                        <div id="fuel-level"
+                            style="width: 100%; height: 100%; background: linear-gradient(90deg, #00ff00, #00cc00); transition: width 0.3s, background 0.3s;">
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 11px; color: #aaa; margin-top: 3px;">
+                        <span id="fuel-percent">100.0</span>%
+                    </div>
+                </div>
+
+                <button id="btn-generate-maneuver" class="action-btn"
+                    style="width: 100%; background: linear-gradient(45deg, #00aaff, #00ffff); margin-top: 10px;">
+                    <i class="fas fa-brain"></i> Generate Maneuver Plan
+                </button>
+
+                <!-- Maneuver Info Panel (hidden by default) -->
+                <div id="maneuver-panel"
+                    style="display: none; margin-top: 10px; padding: 10px; background: rgba(0, 255, 255, 0.1); border-radius: 8px; border: 1px solid rgba(0, 255, 255, 0.3);">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #00ffff;">🛰️ Optimal Maneuver</h4>
+                    <div class="maneuver-details" style="font-size: 11px; color: #ccc;">
+                        <p style="margin: 5px 0;"><strong>Thrust Direction:</strong> <span id="thrust-dir"
+                                style="color: #00ffff;">-</span></p>
+                        <p style="margin: 5px 0;"><strong>Burn Duration:</strong> <span id="burn-time"
+                                style="color: #00ffff;">-</span> seconds</p>
+                        <p style="margin: 5px 0;"><strong>Execute At:</strong> <span id="exec-time"
+                                style="color: #00ffff;">-</span></p>
+                        <p style="margin: 5px 0;"><strong>Fuel Cost:</strong> <span id="fuel-cost"
+                                style="color: #ff9500;">-</span>%</p>
+                        <p style="margin: 5px 0;"><strong>New Miss Distance:</strong> <span id="new-miss"
+                                style="color: #00ff00;">-</span> km</p>
+                    </div>
+                    <button id="execute-maneuver-btn" class="action-btn"
+                        style="width: 100%; background: linear-gradient(45deg, #00ff00, #00cc00); margin-top: 10px; font-size: 12px;">
+                        <i class="fas fa-play"></i> Execute Maneuver (Simulation)
+                    </button>
+                </div>
+            </div>
+
             <div id="status-msg">System Online</div>
 
             <!-- Legend Removed from Sidebar -->
@@ -241,6 +292,7 @@
         </ul>
     </div>
 
+    <script type="module" src="js/maneuver.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 

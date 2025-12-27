@@ -157,6 +157,20 @@ except Exception as e:
 # Initialize Continuous Learner
 learner = ContinuousLearner(model, model_path="residual_model_probabilistic.pth")
 
+# --- DeepDebris 3.0: Load RL Maneuver Agent ---
+maneuver_agent = None
+try:
+    from stable_baselines3 import PPO
+    from rl.space_gym import SpaceGym, action_to_vector, calculate_burn_time, calculate_optimal_time
+    
+    if os.path.exists("rl/models/maneuver_agent.zip"):
+        maneuver_agent = PPO.load("rl/models/maneuver_agent.zip")
+        print("✓ Loaded RL Maneuver Agent (DeepDebris 3.0)")
+    else:
+        print("⚠ RL Maneuver Agent not found. Train with: python rl/train_maneuver_agent.py")
+except Exception as e:
+    print(f"⚠ RL Agent unavailable: {e}")
+
 # ... Imports ...
 from screener import MatrixScreener
 
@@ -543,6 +557,65 @@ class RiskAnalysisRequest(BaseModel):
     sat_id: str
     debris_id: str
     tca: str
+
+class ManeuverRequest(BaseModel):
+    sat_tle: dict  # {"line1": ..., "line2": ...}
+    debris_tle: dict
+    tca: str  # ISO format
+
+@app.post("/plan_maneuver")
+def plan_maneuver(request: ManeuverRequest):
+    """
+    DeepDebris 3.0: Autonomous Maneuver Planning
+    
+    Uses trained RL agent to generate optimal collision avoidance maneuver.
+    Returns thrust direction, timing, fuel cost, and new trajectory.
+    """
+    if maneuver_agent is None:
+        raise HTTPException(
+            status_code=503,
+            detail="RL Maneuver Agent not loaded. Train with: python rl/train_maneuver_agent.py"
+        )
+    
+    try:
+        # Create environment with current scenario
+        env = SpaceGym(
+            sat_tle=request.sat_tle,
+            debris_tle=request.debris_tle,
+            tca=request.tca
+        )
+        
+        # Get initial observation
+        obs, _ = env.reset()
+        
+        # Agent predicts optimal action
+        action, _states = maneuver_agent.predict(obs, deterministic=True)
+        action = int(action)
+        
+        # Simulate maneuver to get new trajectory
+        new_trajectory, fuel_cost, miss_distance = env.simulate_maneuver(action)
+        
+        # Convert action to human-readable format
+        thrust_dir_name = action_to_vector(action)
+        burn_duration = calculate_burn_time(action)
+        exec_time = calculate_optimal_time(request.tca)
+        
+        return {
+            "thrust_direction": thrust_dir_name,
+            "thrust_action": action,
+            "burn_duration_seconds": burn_duration,
+            "execution_time_utc": exec_time,
+            "fuel_cost_percent": fuel_cost,
+            "new_miss_distance_km": miss_distance / 1000,
+            "new_trajectory": [
+                {"x": float(pos[0]), "y": float(pos[1]), "z": float(pos[2])}
+                for pos in new_trajectory
+            ],
+            "status": "success"
+        }
+    except Exception as e:
+        print(f"Maneuver Planning Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze_risk")
 def analyze_risk(request: RiskAnalysisRequest):
