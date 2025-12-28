@@ -10,21 +10,32 @@ from dotenv import load_dotenv
 class CDMService:
     def __init__(self):
         load_dotenv("../.env")
+        # These are now potentially redundant if _login uses ST_IDENTITY/ST_PASSWORD directly
+        # but keeping them as per original code structure outside of the explicit change block.
         self.user = os.getenv("SPACETRACK_USER")
         self.password = os.getenv("SPACETRACK_PASSWORD")
         self.base_url = "https://www.space-track.org"
+        self.LOGIN_URL = f"{self.base_url}/ajaxauth/login" # Added LOGIN_URL
         self.session = requests.Session()
-        self._login()
+        try:
+            self._login()
+        except Exception as e:
+            print(f"⚠ Space-Track Login Skipped: {e}. CDM Service will be limited.")
+            self.session = None
 
     def _login(self):
-        login_url = f"{self.base_url}/ajaxauth/login"
-        payload = {
-            "identity": self.user,
-            "password": self.password
-        }
-        resp = self.session.post(login_url, data=payload)
+        """Authenticate with Space-Track."""
+        identity = os.getenv('ST_IDENTITY')
+        password = os.getenv('ST_PASSWORD')
+        
+        if not identity or not password:
+            raise Exception("Missing ST_IDENTITY or ST_PASSWORD environment variables")
+
+        payload = {'identity': identity, 'password': password}
+        resp = self.session.post(self.LOGIN_URL, data=payload)
+        
         if resp.status_code != 200:
-            raise Exception("Space-Track Login Failed")
+            raise Exception("Login Failed")
         print("LOGGED IN to Space-Track for CDM Service")
 
     def fetch_recent_cdms(self, sat_cat_id=25544, days=2):
@@ -37,6 +48,10 @@ class CDMService:
         
         # Calculate date range
         start_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+        
+        if not self.session:
+            print("⚠ CDM Service Offline (No Login). Returning empty.")
+            return []
         
         # Construct Query
         # We look for CDMs where our satellite is either Object 1 or Object 2

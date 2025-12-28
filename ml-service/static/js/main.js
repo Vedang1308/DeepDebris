@@ -82,6 +82,7 @@ let debrisPredictionLine;
 let simulatedTime = new Date(); // Hoisted critical variable
 let timeScale = 1.0;
 let isLive = true;
+window.currentRisks = []; // Global store for collision risks
 
 // Helper: Convert SGP4 ECI (Z-up) to Three.js (Y-up)
 function toVector3(p) {
@@ -184,6 +185,9 @@ async function fetchAlerts() {
         const resp = await fetch('/alerts');
         if (!resp.ok) return;
         const data = await resp.json();
+
+        // Store risks globally for maneuver planning
+        window.currentRisks = data.alerts || [];
 
         if (data.count === 0) {
             alertsList.innerHTML = '<div class="msg ai">No active alerts. System monitoring...</div>';
@@ -1118,6 +1122,10 @@ window.addEventListener('load', () => {
             console.log("Initializing Debris & Simulation...");
             loadDebrisCatalog();
             initSimulationListeners();
+
+            // Start Alert Monitoring
+            fetchAlerts();
+            setInterval(fetchAlerts, 30000); // Poll every 30s
 
             // DeepDebris 3.0: Initialize Maneuver Planning
             const btnGenerateManeuver = document.getElementById('btn-generate-maneuver');
