@@ -18,7 +18,7 @@ import torch
 from space_gym import SpaceGym
 
 
-def train_agent(total_timesteps=1_000_000, save_path="models/maneuver_agent", device="auto"):
+def train_agent(total_timesteps=1_000_000, save_path="models/maneuver_agent", device="auto", checkpoint_prefix="maneuver_agent"):
     """
     Train PPO agent for collision avoidance.
     
@@ -59,7 +59,7 @@ def train_agent(total_timesteps=1_000_000, save_path="models/maneuver_agent", de
     checkpoint_callback = CheckpointCallback(
         save_freq=10000,
         save_path="./checkpoints/",
-        name_prefix="maneuver_agent"
+        name_prefix=checkpoint_prefix
     )
     
     eval_callback = EvalCallback(
@@ -144,6 +144,12 @@ def main():
         choices=["auto", "cuda", "mps", "cpu"],
         help="Device to use for training (default: auto)"
     )
+    parser.add_argument(
+        "--checkpoint_prefix",
+        type=str,
+        default="maneuver_agent",
+        help="Prefix for checkpoint files (default: maneuver_agent)"
+    )
     
     args = parser.parse_args()
     
@@ -159,7 +165,8 @@ def main():
     train_agent(
         total_timesteps=args.timesteps,
         save_path=args.save_path,
-        device=args.device
+        device=args.device,
+        checkpoint_prefix=args.checkpoint_prefix
     )
 
 

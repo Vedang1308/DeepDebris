@@ -163,11 +163,11 @@ try:
     from stable_baselines3 import PPO
     from rl.space_gym import SpaceGym, action_to_vector, calculate_burn_time, calculate_optimal_time
     
-    if os.path.exists("rl/models/maneuver_agent.zip"):
-        maneuver_agent = PPO.load("rl/models/maneuver_agent.zip")
-        print("✓ Loaded RL Maneuver Agent (DeepDebris 3.0)")
+    if os.path.exists("rl/models/maneuver_agent_v6.zip"):
+        maneuver_agent = PPO.load("rl/models/maneuver_agent_v6.zip")
+        print("✓ Loaded RL Maneuver Agent (DeepDebris v6.0 - Corrected Physics)")
     else:
-        print("⚠ RL Maneuver Agent not found. Train with: python rl/train_maneuver_agent.py")
+        print("⚠ RL Maneuver Agent v6 not found. Train with: python rl/train_maneuver_agent.py")
 except Exception as e:
     print(f"⚠ RL Agent unavailable: {e}")
 

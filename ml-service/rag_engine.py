@@ -5,6 +5,8 @@ from langchain_community.llms import Ollama
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 import os
+import re
+from nlp.debris_knowledge_graph import DebrisKnowledgeGraph
 
 class OrbitGPTEngine:
     def __init__(self, cdm_service):
@@ -23,6 +25,9 @@ class OrbitGPTEngine:
         # Initialize LLM (Ollama - ensure 'llama3' or 'mistral' is pulled)
         # fallback to a default if not found
         self.llm = Ollama(model="llama3")
+        
+        # Initialize Knowledge Graph
+        self.kg = DebrisKnowledgeGraph()
 
     def ingest_cdms(self, sat_id=25544):
         """Fetch CDMs and store them in the Vector DB."""
@@ -52,15 +57,38 @@ class OrbitGPTEngine:
     def ask(self, query):
         """Ask a question to OrbitGPT."""
         
+        # 0. Query Knowledge Graph (Extract Entitites)
+        graph_context = ""
+        # Look for 5-digit NORAD IDs
+        ids = re.findall(r'\b\d{5}\b', query)
+        if ids:
+            print(f"OrbitGPT found IDs: {ids}")
+            for nid in ids:
+                attr = self.kg.query_attribution(nid)
+                if attr:
+                     graph_context += f"Attrib({nid}): Owner={attr['owner']}, Parent={attr['parent']}, Event={attr['origin_event']}\n"
+        
+        if not graph_context and "fengyun" in query.lower():
+             # Fallback context injection for non-ID queries
+             graph_context += "Attrib(Fengyun): Owner=China, Parent=None, Event=2007-ASAT-Test\n"
+
         # Create RAG Chain
-        prompt_template = """
-        You are OrbitGPT, a Flight Dynamics Assistant. 
-        Use the following retrieved Conjunction Data Messages (CDMs) to answer the user's question.
-        If the context doesn't contain the answer, say "I don't see any relevant CDMs."
+        prompt_template = f"""
+        You are OrbitGPT, an expert Flight Dynamics & Space Law Assistant.
         
-        Context: {context}
+        Knowledge Graph Context (Attribution):
+        {graph_context}
         
-        User: {question}
+        Document Context (CDMs):
+        {{context}}
+        
+        User: {{question}}
+        
+        Instructions:
+        1. Use the Knowledge Graph to identify WHO owns the object and WHERE it came from.
+        2. Use the CDMs to identify the Risk level (TCA, Probability).
+        3. Combine both to give a "Space Lawyer" recommendation.
+        
         Answer:
         """
         

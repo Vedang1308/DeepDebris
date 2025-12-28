@@ -12,6 +12,25 @@ from sgp4.api import Satrec, jday
 from datetime import datetime, timedelta
 import math
 
+class MockSatrec:
+    """Mock Satellite object for simplified physics training."""
+    def __init__(self, r, v, epoch_offset=0.0):
+        self.r = np.array(r, dtype=np.float64)
+        self.v = np.array(v, dtype=np.float64)
+        self.epoch_offset = epoch_offset
+        self.is_mock = True
+        
+    def update_state(self, current_time_offset, new_vel):
+        """Update state (re-epoch) to apply a velocity change at a specific time."""
+        # Calculate position at current time using OLD velocity
+        dt = current_time_offset - self.epoch_offset
+        current_r = self.r + self.v * dt
+        
+        # Update state: New epoch starts now, at current_r, with new_vel
+        self.r = current_r
+        self.v = np.array(new_vel, dtype=np.float64)
+        self.epoch_offset = current_time_offset
+
 
 class SpaceGym(gym.Env):
     """
@@ -73,6 +92,11 @@ class SpaceGym(gym.Env):
         self.debris_satrec = None
         self.initial_tca_time = None
         
+        # Simulation Parameters
+        self.dt = 10.0  # 10 seconds per step
+        self.sim_elapsed = 0.0
+        self.start_utc = None
+        
     def reset(self, seed=None, options=None):
         """Reset environment to initial state."""
         super().reset(seed=seed)
@@ -90,6 +114,10 @@ class SpaceGym(gym.Env):
         self.current_step = 0
         self.initial_tca_time = self._parse_time(self.tca)
         
+        # Reset Sim Time
+        self.sim_elapsed = 0.0
+        self.start_utc = datetime.utcnow()
+        
         # Get initial observation
         obs = self._get_observation()
         info = {}
@@ -98,7 +126,12 @@ class SpaceGym(gym.Env):
     
     def step(self, action):
         """Execute one timestep within the environment."""
+        # Clean action input (handle numpy types)
+        if hasattr(action, 'item'):
+            action = int(action.item())
+            
         self.current_step += 1
+        self.sim_elapsed += self.dt
         
         # Apply action (thrust maneuver)
         if action > 0:  # action 0 is "wait"
@@ -119,17 +152,17 @@ class SpaceGym(gym.Env):
     
     def _get_observation(self):
         """Get current observation state."""
-        # Get current positions and velocities
-        sat_pos, sat_vel = self._propagate_satellite(self.sat_satrec)
-        debris_pos, debris_vel = self._propagate_satellite(self.debris_satrec)
+        # Get current positions and velocities (Using Sim Time)
+        sat_pos, sat_vel = self._propagate_satellite(self.sat_satrec, self.sim_elapsed)
+        debris_pos, debris_vel = self._propagate_satellite(self.debris_satrec, self.sim_elapsed)
         
         # Calculate relative state
         rel_pos = np.array(debris_pos) - np.array(sat_pos)
         rel_vel = np.array(debris_vel) - np.array(sat_vel)
         
         # Time to TCA (in seconds)
-        current_time = datetime.utcnow()
-        time_to_tca = (self.initial_tca_time - current_time).total_seconds()
+        current_sim_time = self.start_utc + timedelta(seconds=self.sim_elapsed)
+        time_to_tca = (self.initial_tca_time - current_sim_time).total_seconds()
         
         # Construct observation
         obs = np.array([
@@ -143,73 +176,59 @@ class SpaceGym(gym.Env):
     
     def _calculate_reward(self):
         """Calculate reward based on current state."""
-        # Get current miss distance
+        # Get current miss distance (Predicted minimum)
         miss_distance = self._calculate_miss_distance()
         
-        # Get time to TCA
-        current_time = datetime.utcnow()
-        time_to_tca = (self.initial_tca_time - current_time).total_seconds()
+        # Get time to TCA (Sim Time)
+        current_sim_time = self.start_utc + timedelta(seconds=self.sim_elapsed)
+        time_to_tca = (self.initial_tca_time - current_sim_time).total_seconds()
         
         reward = 0
         done = False
         info = {'miss_distance_km': miss_distance / 1000}
         
-        # 1. SUCCESS: Safe separation achieved
-        if miss_distance > 10000:  # 10km safe
-            reward += 1000
+        # 1. SUCCESS: Safe Separation (> 10km)
+        if miss_distance > 10000:
+            reward = 1000
             done = True
-            info['status'] = 'safe'
+            info['status'] = 'success_safe'
             return reward, done, info
             
-        # 2. FAILURE: Out of time (Collision unavoidable)
-        if time_to_tca <= 0:
-            if miss_distance < 1000:
-                reward -= 1000  # Failed to avoid
-                info['status'] = 'collision_time_expired'
-            else:
-                reward -= 100   # Not safe enough but no collision
-                info['status'] = 'unsafe_time_expired'
-            done = True
-            return reward, done, info
-
-        # 3. FAILURE: Out of fuel
-        if self.fuel_remaining <= 0:
-            reward -= 1000
-            done = True
-            info['status'] = 'out_of_fuel'
-            return reward, done, info
-
-        # 4. STEP REWARDS (Shaping)
-        
-        # State status (no termination)
+        # 2. DANGER: Collision Course
         if miss_distance < 100:
-            reward -= 10  # Penalty for being in dangerous state
-            info['status'] = 'critical'
+             reward -= 10 # Penalty per step for being on collision course
+             info['status'] = 'collision_course'
+             # DO NOT TERMINATE - Give agent chance to maneuver
         elif miss_distance < 1000:
-            reward -= 1
-            info['status'] = 'danger'
+             reward -= 1
+             info['status'] = 'danger_zone'
         else:
-            reward += 1   # Small encouragement for being >1km
-            info['status'] = 'marginal'
-            
-        # Reward for improving miss distance (gradient)
-        reward += (miss_distance / 1000)  # +1 reward per km of separation
+             reward += 1 # Shaping encouragement
+             info['status'] = 'nominal'
+             
+        # 3. FAILURE: Time Expired (Collision or Unsafe)
+        if time_to_tca <= 0:
+             done = True
+             if miss_distance < 1000: # Still unsafe at TCA
+                 reward -= 1000 # Major failure
+                 info['status'] = 'collision_failure'
+             else:
+                 # Safeish but not 10km?
+                 reward -= 100
+                 info['status'] = 'timeout_unsafe'
         
-        # Fuel cost (only when action taken)
-        fuel_used_percent = (self.max_fuel - self.fuel_remaining) / self.max_fuel * 100
-        # We don't penalize existing fuel usage, only changes (handled by action cost implicitly? 
-        # No, let's add a small penalty per step if fuel is low to encourage efficiency?)
-        # Actually, let's keep it simple: simpler is better.
-        # Action cost is handled in step() implicitly by fuel reduction leading to 'out of fuel' faster?
-        # Let's add explicit small cost for fuel used total to encourage efficiency
-        reward -= 0.1 * fuel_used_percent
-
+        # 4. FAILURE: Out of Fuel
+        if self.fuel_remaining <= 0:
+             reward -= 1000
+             done = True
+             info['status'] = 'out_of_fuel'
+             
         return reward, done, info
     
     def _apply_thrust(self, action):
         """Apply thrust maneuver based on action."""
-        # Get current satellite state
-        sat_pos, sat_vel = self._propagate_satellite(self.sat_satrec)
+        # Get current satellite state (using Sim Time)
+        sat_pos, sat_vel = self._propagate_satellite(self.sat_satrec, self.sim_elapsed)
         
         # Calculate thrust direction based on action
         thrust_vector = self._action_to_thrust_vector(action, sat_pos, sat_vel)
@@ -217,9 +236,11 @@ class SpaceGym(gym.Env):
         # Apply delta-V
         new_vel = np.array(sat_vel) + thrust_vector * self.delta_v_per_action
         
-        # Update satellite TLE with new velocity (simplified)
-        # In reality, you'd need to convert velocity change to TLE elements
-        self.sat_satrec = self._update_satrec_velocity(self.sat_satrec, new_vel)
+        # Update satellite TLE with new velocity
+        if hasattr(self.sat_satrec, 'is_mock'):
+            self.sat_satrec.update_state(self.sim_elapsed, new_vel)
+        else:
+            self.sat_satrec = self._update_satrec_velocity(self.sat_satrec, new_vel)
         
         # Deduct fuel
         self.fuel_remaining -= self.fuel_cost_per_action
@@ -250,6 +271,14 @@ class SpaceGym(gym.Env):
     
     def _propagate_satellite(self, satrec, time_offset_seconds=0):
         """Propagate satellite position and velocity."""
+        # Handle Mock Satellites (Linear Physics)
+        if hasattr(satrec, 'is_mock'):
+            # Linear propagation relative to its epoch
+            dt = time_offset_seconds - satrec.epoch_offset
+            r = satrec.r + satrec.v * dt
+            v = satrec.v # Velocity constant (linear drift)
+            return r, v
+
         # Get current time + offset
         now = datetime.utcnow() + timedelta(seconds=time_offset_seconds)
         jd, fr = jday(now.year, now.month, now.day, now.hour, now.minute, now.second)
@@ -264,11 +293,26 @@ class SpaceGym(gym.Env):
         return r, v
     
     def _calculate_miss_distance(self):
-        """Calculate minimum distance between satellite and debris."""
-        # Sample positions over next 24 hours
+        """Calculate minimum distance between satellite and debris near TCA."""
+        # Optimization: Check +/- 30 mins around initial TCA
+        current_time = datetime.utcnow()
+        tca_offset = (self.initial_tca_time - current_time).total_seconds()
+        
+        # Define window (seconds relative to now)
+        start_t = int(tca_offset - 1800)  # -30 mins
+        end_t = int(tca_offset + 1800)    # +30 mins
+        
+        # Ensure we don't look too far in past
+        start_t = max(0, start_t)
+        
+        if start_t >= end_t:
+             return float('inf') # TCA passed long ago
+             
+        # Sample positions
         min_distance = float('inf')
         
-        for t in range(0, 86400, 60):  # Sample every minute
+        # Step size 10s for accuracy (vs 60s) since window is small
+        for t in range(start_t, end_t, 10): 
             sat_pos, _ = self._propagate_satellite(self.sat_satrec, t)
             debris_pos, _ = self._propagate_satellite(self.debris_satrec, t)
             
@@ -278,7 +322,10 @@ class SpaceGym(gym.Env):
         return min_distance
     
     def _parse_tle(self, tle):
-        """Parse TLE into Satrec object."""
+        """Parse TLE into Satrec object (or pass through Mock)."""
+        if isinstance(tle, MockSatrec):
+            return tle
+            
         if isinstance(tle, dict):
             line1 = tle.get('line1', '')
             line2 = tle.get('line2', '')
@@ -296,32 +343,73 @@ class SpaceGym(gym.Env):
         return datetime.fromisoformat(time_str.replace('Z', '+00:00'))
     
     def _update_satrec_velocity(self, satrec, new_vel):
-        """Update Satrec with new velocity (simplified)."""
-        # This is a simplified version - in reality you'd need to:
-        # 1. Convert ECI velocity to Keplerian elements
-        # 2. Update TLE elements
-        # 3. Recreate Satrec
-        # For now, we'll just return the same satrec (placeholder)
+        """Update Satrec with new velocity."""
+        # Handle Mock Satellite
+        if hasattr(satrec, 'is_mock'):
+            satrec.v = np.array(new_vel, dtype=np.float64)
+            return satrec
+
+        # Real SGP4 Satrec (Complexity Warning)
+        # SGP4 objects are complex. Updating V directly breaks orbital elements B*, Mean Motion, etc.
+        # For 'Real' training, we would need to solve the Lambert problem or osculating elements conversion.
+        # For now, we return unchanged (No-Op for Real TLEs).
+        # This implies training MUST use Mock Mode for now.
         return satrec
     
     def _generate_random_scenario(self):
-        """Generate random collision scenario for training."""
-        # Generate random ISS-like orbit
-        sat_tle = {
-            'line1': '1 25544U 98067A   25361.50000000  .00002182  00000-0  41420-4 0  9990',
-            'line2': '2 25544  51.6461 339.8014 0002571  85.5211 274.6305 15.48919393123456'
-        }
+        """Generate deterministic collision scenario using Mock Physics."""
+        # Scenario: Collision in 15 minutes (900s)
+        t_collision = 900
         
-        # Generate random debris with collision course
-        debris_tle = {
-            'line1': '1 99999U 99999A   25361.50000000  .00000000  00000-0  00000-0 0  9999',
-            'line2': '2 99999  51.6500 339.8000 0002600  85.5000 274.6000 15.48900000000001'
-        }
+        # Satellite: LEO orbit (Simplified Linear)
+        # Position: [7000 km, 0, 0]
+        # Velocity: [0, 7.5 km/s, 0] (Along Y axis)
+        sat_r = [7000.0, 0.0, 0.0]
+        sat_v = [0.0, 7.5, 0.0]
         
-        # Random TCA within next 24 hours
-        tca = datetime.utcnow() + timedelta(hours=np.random.uniform(1, 24))
+        # Debris: Impact course
+        # Starts 10km away in Z axis (Cross-track)
+        # MUST arrive at Satellite's future position at T=900
         
-        return sat_tle, debris_tle, tca.isoformat()
+        # Sat Position @ T=900:
+        target_r = [
+            sat_r[0] + sat_v[0] * t_collision,
+            sat_r[1] + sat_v[1] * t_collision,
+            sat_r[2] + sat_v[2] * t_collision
+        ] # [7000, 6750, 0]
+        
+        # Debris Start Position:
+        # Same X/Y, but Z is offset by 10km
+        deb_r = [7000.0, 0.0, 10.0]
+        
+        # Debris Required Velocity to hit Target:
+        # V = (Target - Start) / T
+        deb_v = [
+            (target_r[0] - deb_r[0]) / t_collision,
+            (target_r[1] - deb_r[1]) / t_collision,
+            (target_r[2] - deb_r[2]) / t_collision
+        ]
+        
+        # Create Mock Objects
+        # Note: We return MockSatrec objects directly?
+        # But reset() expects TLE dictionary or calls this.
+        # This function signature returns (sat_tle, deb_tle, tca).
+        # We need to hack it to store the objects OR return Mock objects as "TLEs" 
+        # and handle them in reset.
+        
+        # But wait, reset() calls _parse_tle. 
+        # We should modify reset logic? 
+        # Or make _parse_tle handle Mock objects passed through?
+        
+        # Hack: Return MockSatrec as the "TLE". 
+        # And update _parse_tle to pass it through.
+        
+        sat_obj = MockSatrec(sat_r, sat_v)
+        deb_obj = MockSatrec(deb_r, deb_v)
+        
+        tca_dt = datetime.utcnow() + timedelta(seconds=t_collision)
+        
+        return sat_obj, deb_obj, tca_dt.isoformat()
     
     def simulate_maneuver(self, action):
         """
