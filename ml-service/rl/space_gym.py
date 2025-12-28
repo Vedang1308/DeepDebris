@@ -154,32 +154,46 @@ class SpaceGym(gym.Env):
         done = False
         info = {'miss_distance_km': miss_distance / 1000}
         
-        # Safety reward (primary objective)
-        if miss_distance > 10000:  # 10km safe
-            reward += 100
-            done = True  # Mission success
-            info['status'] = 'safe'
-        elif miss_distance < 1000:  # 1km danger
-            reward -= 50
-            info['status'] = 'danger'
-        
-        # Collision check
+        # CRITICAL: Collision check FIRST (highest priority)
         if miss_distance < 100:  # 100m = collision
-            reward -= 1000
+            reward = -10000  # Massive penalty for collision
             done = True
             info['status'] = 'collision'
+            return reward, done, info
         
-        # Time penalty (encourage early action)
+        # Safety reward (primary objective)
+        if miss_distance > 10000:  # 10km safe
+            reward += 1000  # Large reward for success
+            done = True  # Mission success
+            info['status'] = 'safe'
+        elif miss_distance > 5000:  # 5km moderately safe
+            reward += 500
+            info['status'] = 'moderately_safe'
+        elif miss_distance > 1000:  # 1km marginal
+            reward += 100
+            info['status'] = 'marginal'
+        else:  # < 1km danger zone
+            reward -= 500  # Penalty for danger
+            info['status'] = 'danger'
+        
+        # Distance-based shaping reward (encourage moving away from debris)
+        # Normalize to 0-100 range
+        distance_reward = min(100, miss_distance / 100)
+        reward += distance_reward
+        
+        # Time penalty (encourage early action, but don't make it dominant)
         if time_to_tca < 60 and time_to_tca > 0:
-            reward -= 20
+            reward -= 10  # Reduced from 20
         
-        # Fuel efficiency penalty (applied on every action)
+        # Fuel efficiency penalty - ONLY applied based on actual fuel used
+        # NOT every step, only when fuel is consumed
         fuel_used_percent = (self.max_fuel - self.fuel_remaining) / self.max_fuel * 100
-        reward -= 10 * fuel_used_percent
+        if fuel_used_percent > 0:
+            reward -= 0.5 * fuel_used_percent  # Much smaller penalty (was 10x)
         
         # Out of fuel check
         if self.fuel_remaining <= 0:
-            reward -= 500
+            reward -= 1000  # Reduced from 500
             done = True
             info['status'] = 'out_of_fuel'
         
