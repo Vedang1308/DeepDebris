@@ -62,7 +62,7 @@ class SpaceGym(gym.Env):
         self.max_fuel = max_fuel
         self.fuel_remaining = max_fuel
         self.current_step = 0
-        self.max_steps = 50  # Increased from 100, gives agent time to act
+        self.max_steps = 100
         
         # Thrust parameters
         self.delta_v_per_action = 0.01  # km/s per thrust action
@@ -154,49 +154,56 @@ class SpaceGym(gym.Env):
         done = False
         info = {'miss_distance_km': miss_distance / 1000}
         
-        # CRITICAL: Collision check FIRST (highest priority)
-        if miss_distance < 100:  # 100m = collision
-            reward = -10000  # Massive penalty for collision
-            done = True
-            info['status'] = 'collision'
-            return reward, done, info
-        
-        # Safety reward (primary objective)
+        # 1. SUCCESS: Safe separation achieved
         if miss_distance > 10000:  # 10km safe
-            reward += 1000  # Large reward for success
-            done = True  # Mission success
+            reward += 1000
+            done = True
             info['status'] = 'safe'
-        elif miss_distance > 5000:  # 5km moderately safe
-            reward += 500
-            info['status'] = 'moderately_safe'
-        elif miss_distance > 1000:  # 1km marginal
-            reward += 100
-            info['status'] = 'marginal'
-        else:  # < 1km danger zone
-            reward -= 500  # Penalty for danger
-            info['status'] = 'danger'
-        
-        # Distance-based shaping reward (encourage moving away from debris)
-        # Normalize to 0-100 range
-        distance_reward = min(100, miss_distance / 100)
-        reward += distance_reward
-        
-        # Time penalty (encourage early action, but don't make it dominant)
-        if time_to_tca < 60 and time_to_tca > 0:
-            reward -= 10  # Reduced from 20
-        
-        # Fuel efficiency penalty - ONLY applied based on actual fuel used
-        # NOT every step, only when fuel is consumed
-        fuel_used_percent = (self.max_fuel - self.fuel_remaining) / self.max_fuel * 100
-        if fuel_used_percent > 0:
-            reward -= 0.5 * fuel_used_percent  # Much smaller penalty (was 10x)
-        
-        # Out of fuel check
+            return reward, done, info
+            
+        # 2. FAILURE: Out of time (Collision unavoidable)
+        if time_to_tca <= 0:
+            if miss_distance < 1000:
+                reward -= 1000  # Failed to avoid
+                info['status'] = 'collision_time_expired'
+            else:
+                reward -= 100   # Not safe enough but no collision
+                info['status'] = 'unsafe_time_expired'
+            done = True
+            return reward, done, info
+
+        # 3. FAILURE: Out of fuel
         if self.fuel_remaining <= 0:
-            reward -= 1000  # Reduced from 500
+            reward -= 1000
             done = True
             info['status'] = 'out_of_fuel'
+            return reward, done, info
+
+        # 4. STEP REWARDS (Shaping)
         
+        # State status (no termination)
+        if miss_distance < 100:
+            reward -= 10  # Penalty for being in dangerous state
+            info['status'] = 'critical'
+        elif miss_distance < 1000:
+            reward -= 1
+            info['status'] = 'danger'
+        else:
+            reward += 1   # Small encouragement for being >1km
+            info['status'] = 'marginal'
+            
+        # Reward for improving miss distance (gradient)
+        reward += (miss_distance / 1000)  # +1 reward per km of separation
+        
+        # Fuel cost (only when action taken)
+        fuel_used_percent = (self.max_fuel - self.fuel_remaining) / self.max_fuel * 100
+        # We don't penalize existing fuel usage, only changes (handled by action cost implicitly? 
+        # No, let's add a small penalty per step if fuel is low to encourage efficiency?)
+        # Actually, let's keep it simple: simpler is better.
+        # Action cost is handled in step() implicitly by fuel reduction leading to 'out of fuel' faster?
+        # Let's add explicit small cost for fuel used total to encourage efficiency
+        reward -= 0.1 * fuel_used_percent
+
         return reward, done, info
     
     def _apply_thrust(self, action):
@@ -258,20 +265,10 @@ class SpaceGym(gym.Env):
     
     def _calculate_miss_distance(self):
         """Calculate minimum distance between satellite and debris."""
-        # Only sample around TCA (±2 hours) instead of full 24 hours
-        # This makes training 30x faster!
-        current_time = datetime.utcnow()
-        time_to_tca = (self.initial_tca_time - current_time).total_seconds()
-        
-        # Sample window: 2 hours before TCA to 2 hours after
-        start_time = max(0, time_to_tca - 7200)  # 2 hours before TCA
-        end_time = time_to_tca + 7200  # 2 hours after TCA
-        
+        # Sample positions over next 24 hours
         min_distance = float('inf')
         
-        # Sample every 5 minutes (was every 1 minute for 24 hours = 1440 samples)
-        # Now: every 5 minutes for 4 hours = 48 samples (30x faster!)
-        for t in range(int(start_time), int(end_time), 300):  # 300 seconds = 5 minutes
+        for t in range(0, 86400, 60):  # Sample every minute
             sat_pos, _ = self._propagate_satellite(self.sat_satrec, t)
             debris_pos, _ = self._propagate_satellite(self.debris_satrec, t)
             
@@ -309,28 +306,20 @@ class SpaceGym(gym.Env):
     
     def _generate_random_scenario(self):
         """Generate random collision scenario for training."""
-        # Generate ISS-like orbit for satellite
+        # Generate random ISS-like orbit
         sat_tle = {
             'line1': '1 25544U 98067A   25361.50000000  .00002182  00000-0  41420-4 0  9990',
             'line2': '2 25544  51.6461 339.8014 0002571  85.5211 274.6305 15.48919393123456'
         }
         
-        # Generate debris with AVOIDABLE collision course
-        # Key: Start with 50-100km miss distance that can be improved with thrust
-        # Vary orbital elements slightly to create close approach
-        
-        # Random variations for close approach (but not collision)
-        inc_offset = np.random.uniform(-0.05, 0.05)  # Small inclination difference
-        raan_offset = np.random.uniform(-0.05, 0.05)  # Small RAAN difference
-        
+        # Generate random debris with collision course
         debris_tle = {
             'line1': '1 99999U 99999A   25361.50000000  .00000000  00000-0  00000-0 0  9999',
-            'line2': f'2 99999  {51.6461 + inc_offset:8.4f} {339.8014 + raan_offset:8.4f} 0002600  85.5000 274.6000 15.48900000000001'
+            'line2': '2 99999  51.6500 339.8000 0002600  85.5000 274.6000 15.48900000000001'
         }
         
-        # TCA in 2-6 hours (enough time for agent to act)
-        tca_hours = np.random.uniform(2, 6)
-        tca = datetime.utcnow() + timedelta(hours=tca_hours)
+        # Random TCA within next 24 hours
+        tca = datetime.utcnow() + timedelta(hours=np.random.uniform(1, 24))
         
         return sat_tle, debris_tle, tca.isoformat()
     
