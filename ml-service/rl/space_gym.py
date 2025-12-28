@@ -62,7 +62,7 @@ class SpaceGym(gym.Env):
         self.max_fuel = max_fuel
         self.fuel_remaining = max_fuel
         self.current_step = 0
-        self.max_steps = 100
+        self.max_steps = 50  # Increased from 100, gives agent time to act
         
         # Thrust parameters
         self.delta_v_per_action = 0.01  # km/s per thrust action
@@ -294,25 +294,34 @@ class SpaceGym(gym.Env):
         # 1. Convert ECI velocity to Keplerian elements
         # 2. Update TLE elements
         # 3. Recreate Satrec
+```
         # For now, we'll just return the same satrec (placeholder)
         return satrec
     
     def _generate_random_scenario(self):
         """Generate random collision scenario for training."""
-        # Generate random ISS-like orbit
+        # Generate ISS-like orbit for satellite
         sat_tle = {
             'line1': '1 25544U 98067A   25361.50000000  .00002182  00000-0  41420-4 0  9990',
             'line2': '2 25544  51.6461 339.8014 0002571  85.5211 274.6305 15.48919393123456'
         }
         
-        # Generate random debris with collision course
+        # Generate debris with AVOIDABLE collision course
+        # Key: Start with 50-100km miss distance that can be improved with thrust
+        # Vary orbital elements slightly to create close approach
+        
+        # Random variations for close approach (but not collision)
+        inc_offset = np.random.uniform(-0.05, 0.05)  # Small inclination difference
+        raan_offset = np.random.uniform(-0.05, 0.05)  # Small RAAN difference
+        
         debris_tle = {
             'line1': '1 99999U 99999A   25361.50000000  .00000000  00000-0  00000-0 0  9999',
-            'line2': '2 99999  51.6500 339.8000 0002600  85.5000 274.6000 15.48900000000001'
+            'line2': f'2 99999  {51.6461 + inc_offset:8.4f} {339.8014 + raan_offset:8.4f} 0002600  85.5000 274.6000 15.48900000000001'
         }
         
-        # Random TCA within next 24 hours
-        tca = datetime.utcnow() + timedelta(hours=np.random.uniform(1, 24))
+        # TCA in 2-6 hours (enough time for agent to act)
+        tca_hours = np.random.uniform(2, 6)
+        tca = datetime.utcnow() + timedelta(hours=tca_hours)
         
         return sat_tle, debris_tle, tca.isoformat()
     
