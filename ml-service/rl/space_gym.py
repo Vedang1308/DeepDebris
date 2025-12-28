@@ -258,10 +258,20 @@ class SpaceGym(gym.Env):
     
     def _calculate_miss_distance(self):
         """Calculate minimum distance between satellite and debris."""
-        # Sample positions over next 24 hours
+        # Only sample around TCA (±2 hours) instead of full 24 hours
+        # This makes training 30x faster!
+        current_time = datetime.utcnow()
+        time_to_tca = (self.initial_tca_time - current_time).total_seconds()
+        
+        # Sample window: 2 hours before TCA to 2 hours after
+        start_time = max(0, time_to_tca - 7200)  # 2 hours before TCA
+        end_time = time_to_tca + 7200  # 2 hours after TCA
+        
         min_distance = float('inf')
         
-        for t in range(0, 86400, 60):  # Sample every minute
+        # Sample every 5 minutes (was every 1 minute for 24 hours = 1440 samples)
+        # Now: every 5 minutes for 4 hours = 48 samples (30x faster!)
+        for t in range(int(start_time), int(end_time), 300):  # 300 seconds = 5 minutes
             sat_pos, _ = self._propagate_satellite(self.sat_satrec, t)
             debris_pos, _ = self._propagate_satellite(self.debris_satrec, t)
             
@@ -294,7 +304,6 @@ class SpaceGym(gym.Env):
         # 1. Convert ECI velocity to Keplerian elements
         # 2. Update TLE elements
         # 3. Recreate Satrec
-```
         # For now, we'll just return the same satrec (placeholder)
         return satrec
     
