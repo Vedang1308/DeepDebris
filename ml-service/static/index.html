@@ -54,6 +54,26 @@
                     <span class="value" id="flux-val">150 sfu</span>
                 </div>
             </div>
+            <div class="panel-section">
+                <h3>Decision Engine</h3>
+                <button id="btn-generate-maneuver" class="btn primary">Generate Maneuver Plan</button>
+                <div id="maneuver-panel"
+                    style="display:none; margin-top: 10px; border: 1px solid #00ffff; padding: 10px;">
+                    <div class="stat-row"><span>Burn Time:</span> <span id="burn-time">--</span>s</div>
+                    <div class="stat-row"><span>Thrust:</span> <span id="thrust-dir">--</span></div>
+                    <div class="stat-row"><span>Time (UTC):</span> <span id="exec-time">--</span></div>
+                    <div class="stat-row"><span>Fuel Cost:</span> <span id="fuel-cost">--</span>%</div>
+                    <div class="stat-row"><span>New Miss:</span> <span id="new-miss">--</span> km</div>
+                    <button id="execute-maneuver-btn" class="btn warning" style="margin-top:5px;">Execute
+                        Maneuver</button>
+                </div>
+
+                <h3 style="margin-top: 15px;">Intelligence (New)</h3>
+                <button id="btn-spy-hunter" class="btn danger"
+                    style="background: rgba(255, 0, 0, 0.2); border-color: #ff0000;">
+                    Detect Anomaly (Spy Hunter)
+                </button>
+            </div>
         </header>
 
         <aside class="controls">

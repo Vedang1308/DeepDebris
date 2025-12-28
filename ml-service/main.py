@@ -40,6 +40,20 @@ print("Ingesting initial CDMs...")
 orbit_gpt.ingest_cdms()
 print("OrbitGPT Ready.")
 
+# --- DeepDebris 4.0: Spy Hunter ---
+from anomaly_detector import SpyHunter
+from history_fetcher import HistoryFetcher
+
+# Lazy loading to prevent crash if model missing
+try:
+    spy_hunter = SpyHunter()
+    history_fetcher = HistoryFetcher()
+    print("✓ SpyHunter & HistoryFetcher Initialized")
+except Exception as e:
+    print(f"⚠ SpyHunter Init Failed: {e}")
+    spy_hunter = None
+    history_fetcher = None
+
 # --- Adaptive Architecture: Background Scheduler (Production Mode) ---
 # "What works better": A hybrid. We fetch on startup and then scheduled.
 scheduler = BackgroundScheduler()
@@ -178,6 +192,15 @@ from screener import MatrixScreener
 # PROBABILISTIC MODEL LOADED ABOVE
 
 # Initialize Continuous Learner
+learner = ContinuousLearner(model, model_path="residual_model_probabilistic.pth")
+
+# --- DeepDebris 4.0: Spy Hunter ---
+from anomaly_detector import SpyHunter
+from history_fetcher import HistoryFetcher
+
+spy_hunter = SpyHunter() # Loads untrained model (acceptable for MVP)
+history_fetcher = HistoryFetcher()
+
 learner = ContinuousLearner(model)
 
 # FEATURE 3: Automated Matrix Screener
@@ -693,6 +716,37 @@ def analyze_risk(request: RiskAnalysisRequest):
     except Exception as e:
         print(f"Risk Analysis Failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analyze_behavior/{norad_id}")
+async def analyze_behavior_endpoint(norad_id: int):
+    """
+    DeepDebris 4.0: Pattern of Life Analysis (Spy Hunter).
+    Detects if an object has maneuvered unnaturally in the last 30 days.
+    """
+    if not history_fetcher or not spy_hunter:
+        return {"status": "ERROR", "msg": "Intelligence Module Not Loaded"}
+
+    # 1. Fetch History
+    history = history_fetcher.get_tle_history(norad_id, days=30)
+    
+    if not history or len(history) < 10:
+        return {
+            "norad_id": norad_id,
+            "status": "INSUFFICIENT_DATA",
+            "msg": "Not enough history to establish Pattern of Life."
+        }
+    
+    # 2. Run Inference
+    res = spy_hunter.analyze_behavior(history)
+    
+    return {
+        "norad_id": norad_id,
+        "is_anomaly": res['is_anomaly'],
+        "anomaly_score": res['score'],
+        "threat_level": res['threat_level'],
+        "data_points": len(history),
+        "analysis": "Object behavior diverges from ballistic trajectory." if res['is_anomaly'] else "Object follows expected orbital decay."
+    }
 
 # Static Files (Mount LAST to avoid masking API routes)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

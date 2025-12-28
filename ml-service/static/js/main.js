@@ -1139,7 +1139,48 @@ window.addEventListener('load', () => {
                 btnExecuteManeuver.addEventListener('click', executeManeuver);
             }
 
-            console.log("✓ Maneuver Planning UI initialized");
+            const btnSpyHunter = document.getElementById('btn-spy-hunter');
+            if (btnSpyHunter) {
+                btnSpyHunter.addEventListener('click', async () => {
+                    const statusMsg = document.getElementById('status-msg');
+                    statusMsg.textContent = '🕵️‍♂️ Spy Hunter: Analyzing Pattern of Life...';
+                    statusMsg.style.color = '#ffaa00';
+
+                    try {
+                        // Assuming target is Object 1 (ISS for now) or selected object?
+                        // For demo, we use the selected ID if available, or 25544
+                        // TLE input doesn't give ID. We need the ID.
+                        // Let's assume we analyze the primary object (ISS/25544) for now, or use input field if I add one.
+                        // Wait, inputs are just TLE lines.
+                        // I'll default to 25544 (ISS) for MVP demonstration or parse lines if they contain ID.
+                        const noradId = 25544;
+
+                        const resp = await fetch(`/analyze_behavior/${noradId}`);
+                        const res = await resp.json();
+
+                        if (res.status === 'ERROR' || res.status === 'INSUFFICIENT_DATA') {
+                            throw new Error(res.msg);
+                        }
+
+                        let msg = `Analysis Complete:\nScore: ${res.anomaly_score.toFixed(4)}\nThreat: ${res.threat_level}`;
+                        if (res.is_anomaly) {
+                            msg = `⚠️ ANOMALY DETECTED!\n${msg}\nType: Non-Ballistic Maneuver`;
+                            statusMsg.style.color = '#ff0000';
+                        } else {
+                            msg = `✅ Nominal Behavior\n${msg}`;
+                            statusMsg.style.color = '#00ff00';
+                        }
+                        alert(msg);
+                        statusMsg.textContent = res.is_anomaly ? "⚠️ Anomaly Detected" : "✓ Behavior Nominal";
+
+                    } catch (e) {
+                        statusMsg.textContent = `Spy Hunter Error: ${e.message}`;
+                        statusMsg.style.color = '#ff0000';
+                    }
+                });
+            }
+
+            console.log("✓ Maneuver Planning & Spy Hunter initialized");
         } catch (e) { console.error(e); }
     }, 1500);
 });

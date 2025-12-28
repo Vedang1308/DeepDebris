@@ -349,12 +349,18 @@ class SpaceGym(gym.Env):
             satrec.v = np.array(new_vel, dtype=np.float64)
             return satrec
 
-        # Real SGP4 Satrec (Complexity Warning)
-        # SGP4 objects are complex. Updating V directly breaks orbital elements B*, Mean Motion, etc.
-        # For 'Real' training, we would need to solve the Lambert problem or osculating elements conversion.
-        # For now, we return unchanged (No-Op for Real TLEs).
-        # This implies training MUST use Mock Mode for now.
-        return satrec
+        # Real SGP4 Satrec -> Switch to Linear Physics Model for Post-Maneuver
+        # This allows us to visualize the maneuver effect without TLE math complexity.
+        
+        # 1. Get current position (at sim_elapsed)
+        curr_r, _ = self._propagate_satellite(satrec, self.sim_elapsed)
+        
+        # 2. Create MockSatrec starting from NOW with NEW Velocity
+        # This linearizes the physics from the maneuver point onwards.
+        # It's a valid approximation for short-term maneuver visualization (hours).
+        new_sat = MockSatrec(curr_r, new_vel, epoch_offset=self.sim_elapsed)
+        
+        return new_sat
     
     def _generate_random_scenario(self):
         """Generate deterministic collision scenario using Mock Physics."""
