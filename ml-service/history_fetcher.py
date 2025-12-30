@@ -11,21 +11,24 @@ class HistoryFetcher:
         self.logged_in = False
         
     def _login(self):
-        identity = os.getenv('ST_IDENTITY')
-        password = os.getenv('ST_PASSWORD')
+        identity = os.getenv('SPACETRACK_USER')
+        password = os.getenv('SPACETRACK_PASSWORD')
         if not identity or not password:
-            print("⚠ HistoryFetcher: Missing Credentials.")
+            print("⚠ HistoryFetcher: Missing SPACETRACK_USER or SPACETRACK_PASSWORD environment variables.")
             return False
             
         try:
             resp = self.session.post(self.login_url, data={'identity': identity, 'password': password})
             if resp.status_code == 200:
                 self.logged_in = True
+                print("✓ HistoryFetcher: Logged in successfully")
                 return True
+            else:
+                print(f"⚠ HistoryFetcher: Login failed with status {resp.status_code}")
+                return False
         except Exception as e:
             print(f"⚠ HistoryFetcher Login Error: {e}")
             return False
-        return False
 
     def get_tle_history(self, norad_id, days=30):
         if not self.logged_in:

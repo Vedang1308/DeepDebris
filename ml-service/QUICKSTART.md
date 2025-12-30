@@ -10,6 +10,24 @@ All dependencies have been successfully installed:
 
 ---
 
+## ⚠️ CRITICAL: Space-Track Credentials Required
+
+**This application REQUIRES valid Space-Track.org credentials** to function. There is NO demo mode or fallback data.
+
+### Setup Instructions:
+
+1. Register for a free account at **[https://www.space-Track.org/auth/createAccount](https://www.space-track.org/auth/createAccount)**
+
+2. Create `ml-service/.env` file:
+```bash
+SPACETRACK_USER=your_email@example.com
+SPACETRACK_PASSWORD=your_password
+```
+
+3. **The application will NOT start without these credentials.**
+
+---
+
 ## Next Steps
 
 ### Option 1: Quick Start (Recommended)

@@ -29,7 +29,8 @@ async function generateManeuverPlan() {
         }
 
         // Get current risk (debris TLE)
-        if (!currentRisks || currentRisks.length === 0) {
+        const currentRisks = window.currentRisks || [];
+        if (currentRisks.length === 0) {
             statusMsg.textContent = 'No collision risks detected. Run risk analysis first.';
             statusMsg.style.color = '#ffaa00';
             return;

@@ -5,6 +5,9 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
+// CRITICAL: Export THREE as window global for maneuver.js
+window.THREE = THREE;
+
 // --- Debugging ---
 console.log("DeepDebris 2.0 Starting...");
 
@@ -13,7 +16,7 @@ const scene = new THREE.Scene();
 window.scene = scene; // Expose for debugging
 
 // Camera - Professional setup
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 10, 200000);
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 10, 500000);
 camera.position.set(15000, 8000, 15000);
 
 // Renderer - Production quality
@@ -83,11 +86,14 @@ let simulatedTime = new Date(); // Hoisted critical variable
 let timeScale = 1.0;
 let isLive = true;
 window.currentRisks = []; // Global store for collision risks
+let simulationSatrec = null; // Simulation-specific satellite record
 
 // Helper: Convert SGP4 ECI (Z-up) to Three.js (Y-up)
 function toVector3(p) {
     return new THREE.Vector3(p.x, p.z, -p.y);
 }
+// Export for use in maneuver.js
+window.toVector3 = toVector3;
 
 // --- Label Helper ---
 function createLabel(text, type = 'default') {
@@ -402,6 +408,9 @@ const satGeo = new THREE.SphereGeometry(150, 16, 16);
 const satMat = new THREE.MeshBasicMaterial({ color: 0xFF00FF }); // Magenta to match Physics/Legend
 const satelliteMesh = new THREE.Mesh(satGeo, satMat);
 scene.add(satelliteMesh);
+// Export for use in maneuver.js
+window.scene = scene;
+window.satelliteMesh = satelliteMesh;
 
 // --- Ghost Satellite (AI Prediction) ---
 const ghostGeo = new THREE.SphereGeometry(220, 32, 32); // Larger shell
@@ -445,7 +454,7 @@ function updateOrbitPath(satrec) {
     if (orbitLine) scene.remove(orbitLine);
 
     const points = [];
-    const now = simulatedTime || new Date(); // SYNC with Simulation Time
+    const now = new Date(); // FIXED: Use REAL time as baseline, NOT simulatedTime
     // Calculate path for next 95 mins (1 orbit)
     for (let i = 0; i <= 95; i++) {
         const t = new Date(now.getTime() + i * 60000); // +1 min per step
@@ -461,7 +470,7 @@ function updateOrbitPath(satrec) {
         dashSize: 800,   // Longer dashes
         gapSize: 400,    // Wider gaps
         linewidth: 3,    // Thicker line
-        opacity: 0.6,    // More transparent
+        opacity: 1.0,    // Fully visible
         transparent: true
     });
     orbitLine = new THREE.Line(geometry, material);
@@ -485,14 +494,9 @@ function updateOrbitPath(satrec) {
 // (Orphaned debris logic moved to drawDebrisOrbits)
 // ...
 // predictionLine hoisted
+// predictionLine hoisted
 async function drawPredictionPath(l1, l2) {
-    if (predictionLine) {
-        scene.remove(predictionLine);
-        // Clean up uncertainty tube if it exists
-        if (predictionLine.userData && predictionLine.userData.uncertaintyTube) {
-            scene.remove(predictionLine.userData.uncertaintyTube);
-        }
-    }
+    // DOUBLE BUFFERING: Don't remove old line yet to prevent flickering
 
     try {
         if (!l1 || !l2) return; // Don't predict without TLE
@@ -527,20 +531,17 @@ async function drawPredictionPath(l1, l2) {
             return;
         }
 
-        // Store for Ghost Interpolation
-        predictionData = data;
-        predictionStartTime = new Date(req.start_time);
-
-        const points = [];
+        // Prepare new visualization *before* removing the old one
         const positions = [];
+        const points = [];
         data.forEach(pt => {
             const v = toVector3(pt); // Fix alignment
-            points.push(v);
             positions.push(v.x, v.y, v.z);
+            points.push(v);
         });
 
         const geometry = new LineGeometry();
-        geometry.setPositions(positions); // Flat array [x,y,z, x,y,z...]
+        geometry.setPositions(positions);
 
         const material = new LineMaterial({
             color: 0x00FFFF,      // Cyan (AI Prediction)
@@ -552,36 +553,55 @@ async function drawPredictionPath(l1, l2) {
             transparent: true
         });
 
-        predictionLine = new Line2(geometry, material);
-        predictionLine.computeLineDistances();
-        scene.add(predictionLine);
+        const newPredictionLine = new Line2(geometry, material);
+        newPredictionLine.computeLineDistances();
 
-        // Label Logic: Prediction
-        if (predictionLine.userData.label) scene.remove(predictionLine.userData.label);
+        // Label Logic: Prediction (Attach to new line)
         if (points.length > 0) {
             const endPt = points[points.length - 1];
-            // ... (rest of label logic same, attach to a dummy because Line2 might not support add() same way? It inherits Object3D so it should)
             const label = createLabel("AI Predicted (90m)", 'prediction');
             const dummy = new THREE.Object3D();
             dummy.position.copy(endPt);
-            scene.add(dummy); // Add to scene, not line, to be safe with Line2
+            scene.add(dummy);
             dummy.add(label);
-            predictionLine.userData.label = dummy;
+            newPredictionLine.userData.label = dummy;
         }
 
-        console.log("Prediction Path Drawn (Fat Line)");
+        // --- ATOMIC SWAP ---
+        if (predictionLine) {
+            scene.remove(predictionLine);
+            if (predictionLine.userData && predictionLine.userData.uncertaintyTube) {
+                scene.remove(predictionLine.userData.uncertaintyTube);
+            }
+            if (predictionLine.userData && predictionLine.userData.label) {
+                // Remove old label
+                const oldLabel = predictionLine.userData.label;
+                scene.remove(oldLabel); // Removed from scene
+            }
+        }
+
+        predictionLine = newPredictionLine;
+        scene.add(predictionLine);
+
+        // Store for Ghost Interpolation
+        predictionData = data;
+        predictionStartTime = new Date(req.start_time); // Use the time we REQUESTED, not current time
+
+        console.log("Prediction Path Updated (Double Buffered)");
+
     } catch (err) { console.error(err); }
 }
 
 // --- Debris Visualization (Dynamic) ---
 let debrisObjects = []; // Store { line, mesh, satrec }
-// debrisPredictionLine hoisted
 let currentRisks = []; // Store latest risks for button access
+// CRITICAL: Make this accessible to maneuver.js
+window.currentRisks = currentRisks;
 
 // --- Debris Catalog (Background Field) ---
 async function loadDebrisCatalog() {
     try {
-        const response = await fetch('/debris/catalog?limit=20');
+        const response = await fetch('/debris/catalog?limit=50');
         const data = await response.json();
 
         if (data.debris && data.debris.length > 0) {
@@ -589,11 +609,19 @@ async function loadDebrisCatalog() {
 
             // Material for background debris
             const debrisMat = new THREE.MeshBasicMaterial({
-                color: 0x888888,
+                color: 0xFFFF00, // Bright Yellow for visibility
                 transparent: true,
-                opacity: 0.6
+                opacity: 1.0
             });
-            const debrisGeo = new THREE.SphereGeometry(15, 8, 8); // Small dots
+
+            const debrisGeo = new THREE.SphereGeometry(120, 8, 8); // Visible dots
+
+            // Material for orbits (Yellow, slightly transparent)
+            const debrisOrbitMat = new THREE.LineBasicMaterial({
+                color: 0xFFFF00,
+                transparent: true,
+                opacity: 0.8
+            });
 
             data.debris.forEach(deb => {
                 // Initialize SatRec for propagation
@@ -611,9 +639,49 @@ async function loadDebrisCatalog() {
                 };
                 scene.add(mesh);
 
+                // --- Generate Orbit Path (Full Loop) ---
+                const points = [];
+                const now = new Date();
+
+                // Calculate Orbital Period (T = 1440 / n)
+                // Mean motion is in revs/day. 1440 mins/day.
+                const meanMotion = satrec.no; // rad/min
+                // Period (min) = 2 * pi / n
+                const periodMinutes = (2 * Math.PI) / meanMotion;
+
+                // Propagate for one full period + small buffer to close the loop visually
+                const segments = 100;
+                const duration = periodMinutes + 2;
+
+                for (let i = 0; i <= segments; i++) {
+                    const t = new Date(now.getTime() + (i * duration / segments) * 60000);
+                    const pv = satellite.propagate(satrec, t);
+                    if (pv.position && !isNaN(pv.position.x)) {
+                        points.push(toVector3(pv.position));
+                    }
+                }
+
+                let orbitLine = null;
+                if (points.length > 2) {
+                    const orbitGeo = new THREE.BufferGeometry().setFromPoints(points);
+
+                    // High Visibility Material - Full orbits with proper depth testing
+                    const orbitMat = new THREE.LineBasicMaterial({
+                        color: 0xFFFF00,        // Bright yellow
+                        linewidth: 3,           // Thicker lines  
+                        opacity: 0.9,           // Slightly transparent for aesthetics
+                        transparent: true       // Enable transparency
+                    });
+
+                    orbitLine = new THREE.Line(orbitGeo, orbitMat);
+                    scene.add(orbitLine);
+                }
+                // ---------------------------
+
                 // Push to render loop
                 debrisObjects.push({
                     mesh: mesh,
+                    line: orbitLine,
                     id: deb.id,
                     type: 'catalog',
                     satrec: satrec
@@ -645,10 +713,12 @@ async function drawDebrisOrbits() {
     try {
         const resp = await fetch('/risks');
         currentRisks = await resp.json(); // Update global
+        window.currentRisks = currentRisks; // CRITICAL: Update window global for maneuver.js
 
         if (!Array.isArray(currentRisks)) {
             console.error("Risks API returned non-array:", currentRisks);
             currentRisks = []; // Safe fallback
+            window.currentRisks = [];
             return;
         }
 
@@ -665,7 +735,7 @@ async function drawDebrisOrbits() {
                 const satrec = satellite.twoline2satrec(tleData.line1, tleData.line2);
 
                 // Initial Line Draw
-                const material = new THREE.LineBasicMaterial({ color: 0xFFA500, transparent: true, opacity: 1.0 }); // Orange for Risk
+                const material = new THREE.LineBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 1.0 }); // Yellow for Risk
                 const geometry = new THREE.BufferGeometry();
                 const line = new THREE.Line(geometry, material);
                 scene.add(line);
@@ -673,7 +743,7 @@ async function drawDebrisOrbits() {
                 // Initial Mesh
                 const mesh = new THREE.Mesh(
                     new THREE.SphereGeometry(80, 8, 8),
-                    new THREE.MeshBasicMaterial({ color: 0xFFA500 }) // Orange for Risk
+                    new THREE.MeshBasicMaterial({ color: 0xFFFF00 }) // Yellow for Risk
                 );
                 mesh.userData = {
                     satrec: satrec,
@@ -698,17 +768,22 @@ async function drawDebrisOrbits() {
             } catch (e) { console.warn(e); }
         }
 
-        // Add "Analyze Risk" button if not exists
+        // Add "Analyze Risk" button if not exists - STEP 1 in workflow
         if (!document.getElementById('btn-analyze')) {
             const btnAnalyze = document.createElement('button');
             btnAnalyze.id = 'btn-analyze';
-            btnAnalyze.innerHTML = '<i class="fas fa-search-location"></i> Analyze Collision Risks';
+            btnAnalyze.innerHTML = '<i class="fas fa-search-location"></i> 1. Analyze Collision Risks';
             btnAnalyze.className = 'action-btn';
             btnAnalyze.style.marginTop = '10px';
             btnAnalyze.style.background = 'linear-gradient(45deg, #ff4500, #ff8c00)';
 
-            // Append to Mission Control
-            document.querySelector('.controls').appendChild(btnAnalyze);
+            // Insert BEFORE Generate Maneuver button
+            const maneuverBtn = document.getElementById('btn-generate-maneuver');
+            if (maneuverBtn) {
+                maneuverBtn.parentNode.insertBefore(btnAnalyze, maneuverBtn);
+            } else {
+                document.querySelector('.controls').appendChild(btnAnalyze);
+            }
 
             btnAnalyze.addEventListener('click', async () => {
                 const btn = document.getElementById('btn-analyze');
@@ -740,8 +815,6 @@ async function drawDebrisOrbits() {
                             });
                             const result = await resp.json();
 
-                            // const result = await resp.json(); (Already declared above)
-
                             if (result.physics_miss_distance_km !== undefined) {
                                 alert(
                                     `RISK ANALYSIS REPORT\n\n` +
@@ -757,6 +830,7 @@ async function drawDebrisOrbits() {
                             }
 
                         } catch (e) {
+                            console.error("Risk Analysis Error:", e);
                             alert("Analysis Failed: " + e.message);
                         }
                     } else {
@@ -766,15 +840,17 @@ async function drawDebrisOrbits() {
                 } else {
                     alert("No active collision risks to analyze.");
                 }
-                btn.innerHTML = '<i class="fas fa-search-location"></i> Analyze Collision Risks';
+                btn.innerHTML = '<i class="fas fa-search-location"></i> 1. Analyze Collision Risks';
+
+                // Enable Generate Maneuver button when risks are found
+                const maneuverBtn = document.getElementById('btn-generate-maneuver');
+                if (maneuverBtn && currentRisks.length > 0) {
+                    maneuverBtn.disabled = false;
+                    maneuverBtn.style.opacity = '1';
+                    maneuverBtn.title = 'Click to generate optimal avoidance maneuver';
+                }
             });
         }
-
-        // Auto-Trigger Analysis removed per user request
-        // setTimeout(() => {
-        //     const btn = document.getElementById('btn-analyze');
-        //     if (btn) btn.click();
-        // }, 1000);
 
     } catch (e) { console.error(e); }
 }
@@ -882,7 +958,6 @@ async function drawDebrisPredictionPath(l1, l2) {
 let currentSatrec = null;
 
 // --- Logic: Selection ---
-// (Moved to top)
 
 if (weatherSelect) {
     weatherSelect.addEventListener('change', (e) => {
@@ -910,7 +985,8 @@ if (weatherSelect) {
         document.getElementById('flux-disp').innerText = e.target.value;
         const l1 = inputs.l1.value;
         const l2 = inputs.l2.value;
-        drawPredictionPath(l1, l2); // Debounce could be good, but direct call is okay for now
+        drawPredictionPath(l1, l2);
+        updateSpaceWeatherPhysics(); // Apply to Physics immediately
     });
 
     kpSlider.addEventListener('input', (e) => {
@@ -918,9 +994,53 @@ if (weatherSelect) {
         const l1 = inputs.l1.value;
         const l2 = inputs.l2.value;
         drawPredictionPath(l1, l2);
+        updateSpaceWeatherPhysics(); // Apply to Physics immediately
     });
 }
 
+// --- DeepDebris 4.0: Global Weather Physics ---
+function updateSpaceWeatherPhysics() {
+    // Answer user: "It should change according to weather... same for all objects"
+    const flux = parseFloat(fluxSlider ? fluxSlider.value : 150);
+    const kp = parseFloat(kpSlider ? kpSlider.value : 3);
+
+    // Heuristic: Scale B* (Drag Term) based on Flux anomaly
+    // Baseline Flux ~100. High Flux = High Drag.
+    // Factor 1.0 at 100 Flux. 
+    // Factor 5.0 at 300 Flux?
+    const dragScaler = Math.max(0.5, (flux / 100.0) * (1 + kp / 10.0));
+
+    console.log(`Applying Weather Physics: Drag Scaler = ${dragScaler.toFixed(2)}x (Flux ${flux}, Kp ${kp})`);
+
+    // 1. Update Primary Satellite (Simulation Instance)
+    // "Actual" (Purple) path remains rigid (currentSatrec).
+    // "Target" (Mesh) uses simulationSatrec which reacts to weather.
+
+    if (currentSatrec) {
+        const l1 = inputs.l1.value;
+        const l2 = inputs.l2.value;
+        if (l1 && l2) {
+            // Clone for simulation
+            simulationSatrec = satellite.twoline2satrec(l1, l2);
+
+            // Apply Physics to the Simulation Instance ONLY
+            if (!simulationSatrec.originalBstar) simulationSatrec.originalBstar = simulationSatrec.bstar;
+            simulationSatrec.bstar = simulationSatrec.originalBstar * dragScaler;
+            console.log(`Simulation SatRec Updated: Drag x${dragScaler.toFixed(2)}`);
+        }
+    }
+
+    // 2. Update All Debris
+    if (debrisObjects) {
+        debrisObjects.forEach(obj => {
+            if (obj.satrec) {
+                if (!obj.satrec.originalBstar) obj.satrec.originalBstar = obj.satrec.bstar;
+                obj.satrec.bstar = obj.satrec.originalBstar * dragScaler;
+            }
+        });
+    }
+    // Note: This changes the 'propagate' result dynamically for the NEXT frame!
+}
 
 // Handle Change: Trigger Live Fetch
 selector.addEventListener('change', (e) => {
@@ -939,6 +1059,9 @@ function updateSatelliteEngine() {
         // Trigger New Visualizations
         drawPredictionPath(l1, l2);
         drawDebrisOrbits(); // Refresh debris context
+
+        // Apply Initial Weather
+        updateSpaceWeatherPhysics();
 
         console.log("Satellite Initialized");
     } catch (err) {
@@ -1004,8 +1127,12 @@ function animate() {
     atmosphere.rotation.y += 0.00007;
 
     // 2. Satellite Physics
-    if (currentSatrec) {
-        const positionAndVelocity = satellite.propagate(currentSatrec, simulatedTime);
+    // Use SIMULATION SATREC (Affected by Weather) for the actual object
+    // If simulationSatrec is null, fallback to currentSatrec (Baseline)
+    const activeSatrec = simulationSatrec || currentSatrec;
+
+    if (activeSatrec) {
+        const positionAndVelocity = satellite.propagate(activeSatrec, simulatedTime);
 
         const positionEci = positionAndVelocity.position;
         const velocityEci = positionAndVelocity.velocity;
@@ -1035,43 +1162,78 @@ function animate() {
     });
 
     // --- Ghost Update (AI Path) ---
+    // Rolling Prediction Logic
+    if (!isLive && currentSatrec) {
+        // Init lastPredictionTime if null
+        if (!window.lastPredictionTime) window.lastPredictionTime = new Date(simulatedTime.getTime());
+
+        const minsSinceLastPred = (simulatedTime - window.lastPredictionTime) / 60000;
+
+        // Refresh if we've drifted comfortably forward, OR if we jumped backward (negative drift)
+        // Refresh every 30 minutes of simulated time to keep "Future" valid
+        if ((minsSinceLastPred > 30 || minsSinceLastPred < -5) && !window.isPredicting) {
+            console.log(`Sim jumped ${minsSinceLastPred.toFixed(1)} mins. Refreshing AI Prediction...`);
+            window.isPredicting = true;
+
+            const l1 = inputs.l1.value;
+            const l2 = inputs.l2.value;
+
+            drawPredictionPath(l1, l2).then(() => {
+                window.lastPredictionTime = new Date(simulatedTime.getTime());
+                window.isPredicting = false;
+            });
+        }
+    }
+
     if (ghostMesh && predictionData.length > 0 && predictionStartTime) {
         // Calculate minutes elapsed since prediction start
         const elapsed = (simulatedTime - predictionStartTime) / 60000;
-        if (elapsed >= 0 && elapsed < predictionData.length - 1) {
-            const idx = Math.floor(elapsed);
-            const alpha = elapsed - idx;
+
+        // More robust boundary check
+        // Allow a small negative buffer (e.g., -0.1 min) to catch slight floating point jitters around 0
+        // And allow clamping to the end if we are just slightly past
+        if (elapsed >= -0.1 && elapsed < predictionData.length - 1) {
+            const validElapsed = Math.max(0, elapsed); // Clamp negative to 0
+            const idx = Math.floor(validElapsed);
+            const alpha = validElapsed - idx;
 
             const p1 = predictionData[idx];
             const p2 = predictionData[idx + 1];
 
-            // Linear Interpolation
-            const x = p1.x + (p2.x - p1.x) * alpha;
-            const y = p1.y + (p2.y - p1.y) * alpha;
-            const z = p1.z + (p2.z - p1.z) * alpha;
+            if (p1 && p2) {
+                // Linear Interpolation
+                const x = p1.x + (p2.x - p1.x) * alpha;
+                const y = p1.y + (p2.y - p1.y) * alpha;
+                const z = p1.z + (p2.z - p1.z) * alpha;
 
-            ghostMesh.position.copy(toVector3({ x, y, z }));
-            ghostMesh.visible = true;
+                ghostMesh.position.copy(toVector3({ x, y, z }));
+                ghostMesh.visible = true;
 
-            // Draw Connection Line (Physics -> AI)
-            if (satelliteMesh && correctionLine) {
-                const pSat = satelliteMesh.position;
-                const pGhost = ghostMesh.position;
-                correctionLine.geometry.setFromPoints([pSat, pGhost]);
-                correctionLine.visible = true;
+                // Draw Connection Line (Physics -> AI)
+                if (satelliteMesh && correctionLine) {
+                    const pSat = satelliteMesh.position;
+                    const pGhost = ghostMesh.position;
+                    correctionLine.geometry.setFromPoints([pSat, pGhost]);
+                    correctionLine.visible = true;
 
-                // Calculate KM offset (Earth Radius 100 units = 6371 km)
-                const distUnits = pSat.distanceTo(pGhost);
-                const distKm = (distUnits / 100.0) * 6371.0;
+                    // Calculate KM offset
+                    const distUnits = pSat.distanceTo(pGhost);
+                    const distKm = (distUnits / 100.0) * 6371.0;
 
-                ghostLabel.element.innerHTML = `AI PREDICTION<br>Offset: ${distKm.toFixed(1)} km`;
-                ghostLabel.element.style.color = distKm > 50 ? "#ffcc00" : "#00ffff";
+                    ghostLabel.element.innerHTML = `AI PREDICTION<br>Offset: ${distKm.toFixed(1)} km`;
+                    ghostLabel.element.style.color = distKm > 50 ? "#ffcc00" : "#00ffff";
+                }
             }
         } else {
-            ghostMesh.visible = false; // Hide if out of range
+            // Out of bounds
+            // Only hide if we are significantly out of bounds. 
+            // If we are just waiting for the next prediction update (race condition), keep showing the last point?
+            // For now, hiding is safer to avoid showing a ghost stuck in the past.
+            ghostMesh.visible = false;
             if (correctionLine) correctionLine.visible = false;
         }
     }
+
 
 
     // Re-calculate Lines (Dynamic Sync)
@@ -1174,6 +1336,7 @@ window.addEventListener('load', () => {
                         statusMsg.textContent = res.is_anomaly ? "⚠️ Anomaly Detected" : "✓ Behavior Nominal";
 
                     } catch (e) {
+                        alert(`Spy Hunter Error: ${e.message}`);
                         statusMsg.textContent = `Spy Hunter Error: ${e.message}`;
                         statusMsg.style.color = '#ff0000';
                     }
@@ -1459,14 +1622,65 @@ async function runCollisionSim(tle1, tle2, hours, isImpact) {
 
 function runManeuverSim(hours) {
     document.getElementById('sim-status').innerText = `Simulating Avoidance Maneuver (Delta-V) at T+${hours}h...`;
+
+    // Switch to Predict mode to fast-forward
+    setMode('SIM');
+
+    // Advance simulated time
+    const hoursInMs = hours * 60 * 60 * 1000;
+    simulatedTime = new Date(simulatedTime.getTime() + hoursInMs);
+
+    // Update orbit and prediction
+    updateSatelliteEngine();
+
+    setTimeout(() => {
+        document.getElementById('sim-status').innerText = `✓ Maneuver simulation complete at T+${hours}h`;
+    }, 1000);
 }
 
 function runStormSim(hours) {
     document.getElementById('sim-status').innerText = `Simulating Solar Storm (Drag x3) for ${hours}h...`;
+
+    // Set storm weather
+    if (fluxSlider) {
+        fluxSlider.value = 300;
+        document.getElementById('flux-disp').innerText = '300';
+    }
+    if (kpSlider) {
+        kpSlider.value = 9;
+        document.getElementById('kp-disp').innerText = '9';
+    }
+
+    // Switch to Predict mode and advance time
+    setMode('SIM');
+    const hoursInMs = hours * 60 * 60 * 1000;
+    simulatedTime = new Date(simulatedTime.getTime() + hoursInMs);
+
+    // Update with storm effects
+    updateSatelliteEngine();
+    updateSpaceWeatherPhysics();
+
+    setTimeout(() => {
+        document.getElementById('sim-status').innerText = `✓ Storm simulation complete - ${hours}h elapsed`;
+    }, 1000);
 }
 
 function runDecaySim(hours) {
     document.getElementById('sim-status').innerText = `Simulating Orbital Decay over ${hours}h...`;
+
+    // Switch to Predict mode to fast-forward
+    setMode('SIM');
+
+    // Advance simulated time
+    const hoursInMs = hours * 60 * 60 * 1000;
+    simulatedTime = new Date(simulatedTime.getTime() + hoursInMs);
+
+    // Update orbit
+    updateSatelliteEngine();
+
+    setTimeout(() => {
+        document.getElementById('sim-status').innerText = `✓ Decay simulation complete - ${hours}h elapsed`;
+    }, 1000);
 }
 
 function clearSimulation() {
@@ -1475,5 +1689,5 @@ function clearSimulation() {
 }
 
 // Start Listeners
-// initSimulationListeners();
-// loadDebrisCatalog();
+initSimulationListeners();
+loadDebrisCatalog();

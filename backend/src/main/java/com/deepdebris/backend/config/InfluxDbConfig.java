@@ -33,6 +33,12 @@ public class InfluxDbConfig {
         // Alternatively, use v1 compat API if needed, but v2 is standard.
         // For simplicity in this demo, let's assume we pass the raw pointer.
 
-        return InfluxDBClientFactory.create(url, token.toCharArray(), org, bucket);
+        // Null safety: Ensure token, org, and bucket are not null
+        String safeUrl = (url != null) ? url : "http://localhost:8086";
+        String safeToken = (token != null) ? token : "";
+        String safeOrg = (org != null) ? org : "deepdebris";
+        String safeBucket = (bucket != null) ? bucket : "tle_history";
+
+        return InfluxDBClientFactory.create(safeUrl, safeToken.toCharArray(), safeOrg, safeBucket);
     }
 }

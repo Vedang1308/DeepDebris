@@ -25,18 +25,18 @@ class CDMService:
 
     def _login(self):
         """Authenticate with Space-Track."""
-        identity = os.getenv('ST_IDENTITY')
-        password = os.getenv('ST_PASSWORD')
+        identity = os.getenv('SPACETRACK_USER')
+        password = os.getenv('SPACETRACK_PASSWORD')
         
         if not identity or not password:
-            raise Exception("Missing ST_IDENTITY or ST_PASSWORD environment variables")
+            raise Exception("Missing SPACETRACK_USER or SPACETRACK_PASSWORD environment variables")
 
         payload = {'identity': identity, 'password': password}
         resp = self.session.post(self.LOGIN_URL, data=payload)
         
         if resp.status_code != 200:
             raise Exception("Login Failed")
-        print("LOGGED IN to Space-Track for CDM Service")
+        print("✓ CDM Service: Logged in to Space-Track successfully")
 
     def fetch_recent_cdms(self, sat_cat_id=25544, days=2):
         """

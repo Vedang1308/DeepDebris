@@ -35,10 +35,19 @@ propagator = Propagator()
 weather_service = WeatherService()
 cdm_service = CDMService()
 # Initialize OrbitGPT (Ingest on startup for demo)
-orbit_gpt = OrbitGPTEngine(cdm_service)
-print("Ingesting initial CDMs...")
-orbit_gpt.ingest_cdms()
-print("OrbitGPT Ready.")
+# Initialize OrbitGPT (Ingest on startup for demo)
+orbit_gpt = None
+try:
+    orbit_gpt = OrbitGPTEngine(cdm_service)
+    print("Ingesting initial CDMs...")
+    orbit_gpt.ingest_cdms()
+    print("OrbitGPT Ready.")
+except Exception as e:
+    print(f"⚠ OrbitGPT Init Failed (Non-Critical): {e}")
+    # Create a dummy or handle None usage in endpoints
+    class DummyOrbitGPT:
+        def ask(self, query): return "System Error: Analyst Offline."
+    orbit_gpt = DummyOrbitGPT()
 
 # --- DeepDebris 4.0: Spy Hunter ---
 from anomaly_detector import SpyHunter
@@ -285,32 +294,47 @@ def get_debris_catalog(limit: int = 20):
     Returns TLE data for tracked debris in LEO.
     """
     try:
-        # Real debris NORAD IDs from major collision events
-        debris_ids = [
-            22403,  # SL-16 DEB  
-            25400,  # COSMOS 2251 DEB
-            33591,  # IRIDIUM 33 DEB
-            37756,  # BREEZE-M DEB
-            40294,  # H-2A DEB
-            41731,  # DELTA 2 DEB
-            43947,  # CZ-4B DEB
-            27436   # COSMOS 2389
-        ]
+        # Dynamic Real-Time Fetch from Space-Track
+        # Criteria: Object Type = DEBRIS, Mean Motion > 11.25 (LEO), Latest TLE
+        
+        if not SPACETRACK_USER or not SPACETRACK_PASSWORD:
+             raise Exception("Space-Track credentials missing.")
+
+        print(f"Fetching {limit} live debris objects from Space-Track...")
+        
+        session = requests.Session()
+        login_url = "https://www.space-track.org/ajaxauth/login"
+        # Query: Latest TLE for top N debris objects in LEO
+        query = f"https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/OBJECT_TYPE/DEBRIS/MEAN_MOTION/>11.25/orderby/EPOCH desc/limit/{limit}/format/json"
+        
+        resp = session.post(login_url, data={"identity": SPACETRACK_USER, "password": SPACETRACK_PASSWORD})
+        if resp.status_code != 200:
+             raise Exception("Space-Track Login Failed")
+             
+        resp = session.get(query)
+        if resp.status_code != 200:
+             raise Exception(f"Space-Track Query Failed: {resp.status_code}")
+             
+        data = resp.json()
         
         debris_list = []
-        for debris_id in debris_ids[:limit]:
-            try:
-                tle_data = get_latest_tle(debris_id)
-                if tle_data:
-                    debris_list.append({
-                        "id": str(debris_id),
-                        "name": tle_data.get("name", f"DEBRIS-{debris_id}"),
-                        "line1": tle_data["line1"],
-                        "line2": tle_data["line2"]
-                    })
-            except Exception as outer_e:
-                print(f"Skipping debris {debris_id}: {outer_e}")
-                continue
+        for item in data:
+            debris_list.append({
+                "id": str(item['NORAD_CAT_ID']),
+                "name": item['OBJECT_NAME'],
+                "line1": item['TLE_LINE1'],
+                "line2": item['TLE_LINE2']
+            })
+            
+            # Populate TLE Cache to avoid re-fetching individually later
+            TLE_CACHE[str(item['NORAD_CAT_ID'])] = {
+                "line1": item['TLE_LINE1'],
+                "line2": item['TLE_LINE2'],
+                "name": item['OBJECT_NAME'],
+                "epoch": item['EPOCH'],
+                "source": "SPACE-TRACK-LIVE-BATCH",
+                "timestamp": time.time()
+            }
         
         return {"debris": debris_list, "count": len(debris_list)}
     except Exception as e:
@@ -351,15 +375,23 @@ def get_risk_objects():
             if r["id"] != "UNKNOWN":
                  new_risks.append(r)
         
-        # Update Cache
         if new_risks:
             CDM_CACHE["25544"] = {
                 "risks": new_risks,
                 "timestamp": time.time()
             }
             return new_risks
+            
+        print("Live fetch empty. No risks to display.")
+        return []
+
     except Exception as e:
         print(f"Error checking risks: {e}")
+        return []
+        
+    return []
+            
+
         
     return []
 
@@ -371,11 +403,19 @@ CACHE_DURATION = 3600 # 1 hour
 def get_latest_tle(norad_id: int):
     """
     Fetch TLE from Cache or Space-Track (Auto-Caching).
+    REQUIRES valid Space-Track credentials in environment variables.
     """
     nid_str = str(norad_id)
     now = time.time()
     
-    # 1. Check Cache
+    # 1. Check if credentials exist
+    if not SPACETRACK_USER or not SPACETRACK_PASSWORD:
+        raise HTTPException(
+            status_code=503,
+            detail="Space-Track credentials not configured. Set SPACETRACK_USER and SPACETRACK_PASSWORD environment variables."
+        )
+    
+    # 2. Check Cache
     if nid_str in TLE_CACHE:
         entry = TLE_CACHE[nid_str]
         age = now - entry['timestamp']
@@ -383,49 +423,50 @@ def get_latest_tle(norad_id: int):
             print(f"Returning Cached TLE for {nid_str} (Age: {int(age)}s)")
             return entry
             
-    # 2. Fetch Live
-    if SPACETRACK_USER and SPACETRACK_PASSWORD:
-        try:
-            print(f"Fetching real TLE for {norad_id}...")
-            # ... (Session/Request logic largely same, but condensed)
-            session = requests.Session()
-            login_url = "https://www.space-track.org/ajaxauth/login"
-            query = f"https://www.space-track.org/basicspacedata/query/class/tle_latest/NORAD_CAT_ID/{norad_id}/orderby/ORDINAL desc/format/json"
-            
-            resp = session.post(login_url, data={"identity": SPACETRACK_USER, "password": SPACETRACK_PASSWORD})
-            if resp.status_code == 200:
-                resp = session.get(query)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if isinstance(data, list) and len(data) > 0 and 'TLE_LINE1' in data[0]:
-                        sat = data[0]
-                        cache_entry = {
-                            "line1": sat["TLE_LINE1"],
-                            "line2": sat["TLE_LINE2"],
-                            "name": sat["OBJECT_NAME"],
-                            "epoch": sat["EPOCH"],
-                            "source": "SPACE-TRACK-LIVE",
-                            "timestamp": now
-                        }
-                        # Update Cache
-                        TLE_CACHE[nid_str] = cache_entry
-                        return cache_entry
-                    elif 'error' in data:
-                        print(f"Space-Track API Error: {data}")
-                        
-        except Exception as e:
-            print(f"Error fetching real TLE: {e}")
-            
-    # 3. Fallback to Stale Cache if Live Failed (e.g. Rate Limit)
-    if nid_str in TLE_CACHE:
-        print(f"Live Fetch Failed. Using Stale Cache for {nid_str}.")
-        entry = TLE_CACHE[nid_str]
-        entry['source'] = "CACHE-STALE"
-        return entry
+    # 3. Fetch Live from Space-Track
+    try:
+        print(f"Fetching real TLE for {norad_id}...")
+        session = requests.Session()
+        login_url = "https://www.space-track.org/ajaxauth/login"
+        query = f"https://www.space-track.org/basicspacedata/query/class/tle_latest/NORAD_CAT_ID/{norad_id}/orderby/ORDINAL desc/format/json"
         
+        resp = session.post(login_url, data={"identity": SPACETRACK_USER, "password": SPACETRACK_PASSWORD})
+        if resp.status_code == 200:
+            resp = session.get(query)
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list) and len(data) > 0 and 'TLE_LINE1' in data[0]:
+                    sat = data[0]
+                    cache_entry = {
+                        "line1": sat["TLE_LINE1"],
+                        "line2": sat["TLE_LINE2"],
+                        "name": sat["OBJECT_NAME"],
+                        "epoch": sat["EPOCH"],
+                        "source": "SPACE-TRACK-LIVE",
+                        "timestamp": now
+                    }
+                    # Update Cache
+                    TLE_CACHE[nid_str] = cache_entry
+                    return cache_entry
+                elif 'error' in data:
+                    raise HTTPException(status_code=500, detail=f"Space-Track API Error: {data}")
+        else:
+            raise HTTPException(status_code=401, detail="Space-Track authentication failed. Check credentials.")
+                    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching real TLE: {e}")
+        # 4. Fallback to Stale Cache if Live Failed (e.g. Rate Limit)
+        if nid_str in TLE_CACHE:
+            print(f"Live Fetch Failed. Using Stale Cache for {nid_str}.")
+            entry = TLE_CACHE[nid_str]
+            entry['source'] = "CACHE-STALE"
+            return entry
+        raise HTTPException(status_code=500, detail=f"TLE fetch failed: {str(e)}")
             
-    # Real Mode: No fallback.
-    raise HTTPException(status_code=404, detail="Satellite ID not found in Space-Track query.")
+    # No satellite found
+    raise HTTPException(status_code=404, detail=f"Satellite {norad_id} not found in Space-Track database.")
 
 class TleRequest(BaseModel):
     line1: str
@@ -501,24 +542,28 @@ def predict_batch(request: BatchRequest):
                     
                 final_pos = pos_physics + correction
                 
-                # Final validation before JSON
-                if np.any(np.isnan(final_pos)) or np.any(np.isinf(final_pos)):
-                    print(f"Skipping point {ts}: Final position is NaN/Inf")
-                    continue
-                
-                results.append({
-                    "ts": ts.isoformat(),
-                    "x": float(final_pos[0]), "y": float(final_pos[1]), "z": float(final_pos[2]),
-                    "physics_x": float(pos_physics[0]), "physics_y": float(pos_physics[1]), "physics_z": float(pos_physics[2]),
-                    "uncertainty_km": uncert
-                })
-            except ValueError as e:
-                # SGP4 Error (e.g. decay). Skip this point but allow others if possible.
-                print(f"Skipping point {ts} due to SGP4 error: {e}")
-                continue
             except Exception as e:
                 print(f"Skipping point {ts} due to error: {e}")
                 continue
+
+            # --- REAL AI Prediction ---
+            # The AI model's correction (already applied above via `correction` variable)
+            # represents the TRAINED model's learned adjustments based on real physics.
+            # NO additional artificial heuristics needed.
+            
+            # -----------------------------------------------------
+
+            # Final validation before JSON
+            if np.any(np.isnan(final_pos)) or np.any(np.isinf(final_pos)):
+                print(f"Skipping point {ts}: Final position is NaN/Inf")
+                continue
+
+            results.append({
+                "ts": ts.isoformat(),
+                "x": float(final_pos[0]), "y": float(final_pos[1]), "z": float(final_pos[2]),
+                "physics_x": float(pos_physics[0]), "physics_y": float(pos_physics[1]), "physics_z": float(pos_physics[2]),
+                "uncertainty_km": uncert
+            })
 
         if not results:
              raise HTTPException(status_code=400, detail="Prediction failed: No valid points generated.")
@@ -648,14 +693,27 @@ def analyze_risk(request: RiskAnalysisRequest):
     """
     try:
         # 1. Get TLEs
-        sat_tle = get_latest_tle(int(request.sat_id)) # Auto-caches
-        deb_axis = get_latest_tle(int(request.debris_id))
-        
+        try:
+            sat_id_val = int(request.sat_id) if request.sat_id.isdigit() else 25544
+            debris_id_val = int(request.debris_id) if request.debris_id.isdigit() else 0
+            
+            sat_tle = get_latest_tle(sat_id_val)
+            deb_tle = get_latest_tle(debris_id_val)
+            
+            if not sat_tle:
+                 raise ValueError(f"Could not fetch TLE for Satellite {sat_id_val}")
+            
+            if not deb_tle:
+                 raise ValueError(f"Could not fetch TLE for Debris {debris_id_val}")
+
+        except Exception as e:
+             return {"status": "error", "msg": f"TLE Fetch Failed: {str(e)}", "recommendation": "RETRY"}
+
         tca_dt = datetime.fromisoformat(request.tca.replace("Z", "+00:00"))
         
         # 2. Physics Prediction (SGP4)
         sat_pos = propagator.get_position(sat_tle['line1'], sat_tle['line2'], tca_dt)
-        deb_pos = propagator.get_position(deb_axis['line1'], deb_axis['line2'], tca_dt)
+        deb_pos = propagator.get_position(deb_tle['line1'], deb_tle['line2'], tca_dt)
         
         physics_dist = np.linalg.norm(sat_pos - deb_pos)
         

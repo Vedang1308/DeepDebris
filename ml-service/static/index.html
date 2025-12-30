@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DeepDebris 2.0 | Mission Control</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=4.1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Global Error Handler -->
@@ -54,26 +54,7 @@
                     <span class="value" id="flux-val">150 sfu</span>
                 </div>
             </div>
-            <div class="panel-section">
-                <h3>Decision Engine</h3>
-                <button id="btn-generate-maneuver" class="btn primary">Generate Maneuver Plan</button>
-                <div id="maneuver-panel"
-                    style="display:none; margin-top: 10px; border: 1px solid #00ffff; padding: 10px;">
-                    <div class="stat-row"><span>Burn Time:</span> <span id="burn-time">--</span>s</div>
-                    <div class="stat-row"><span>Thrust:</span> <span id="thrust-dir">--</span></div>
-                    <div class="stat-row"><span>Time (UTC):</span> <span id="exec-time">--</span></div>
-                    <div class="stat-row"><span>Fuel Cost:</span> <span id="fuel-cost">--</span>%</div>
-                    <div class="stat-row"><span>New Miss:</span> <span id="new-miss">--</span> km</div>
-                    <button id="execute-maneuver-btn" class="btn warning" style="margin-top:5px;">Execute
-                        Maneuver</button>
-                </div>
 
-                <h3 style="margin-top: 15px;">Intelligence (New)</h3>
-                <button id="btn-spy-hunter" class="btn danger"
-                    style="background: rgba(255, 0, 0, 0.2); border-color: #ff0000;">
-                    Detect Anomaly (Spy Hunter)
-                </button>
-            </div>
         </header>
 
         <aside class="controls">
@@ -196,13 +177,11 @@
                 </div>
             </div>
 
-            <!-- DeepDebris 3.0: Autonomous Maneuver Planning -->
+            <!-- Decision Engine & Intel -->
             <div class="control-group"
-                style="border-top: 2px solid rgba(0, 255, 255, 0.3); padding-top: 15px; margin-top: 15px;">
+                style="padding-top: 15px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
                 <label style="color: #00ffff; font-weight: bold;">
-                    <i class="fas fa-rocket"></i> Autonomous Maneuver Planning
-                    <i class="fas fa-info-circle"
-                        title="AI-powered collision avoidance using Deep Reinforcement Learning"></i>
+                    <i class="fas fa-brain"></i> Decision Engine
                 </label>
 
                 <!-- Fuel Gauge -->
@@ -219,101 +198,115 @@
                     </div>
                 </div>
 
-                <button id="btn-generate-maneuver" class="action-btn"
-                    style="width: 100%; background: linear-gradient(45deg, #00aaff, #00ffff); margin-top: 10px;">
-                    <i class="fas fa-brain"></i> Generate Maneuver Plan
+                <button id="btn-generate-maneuver" class="action-btn" disabled
+                    style="width: 100%; background: linear-gradient(45deg, #00aaff, #00ffff); margin-top: 10px; opacity: 0.5;"
+                    title="Run 'Analyze Collision Risks' first">
+                    <i class="fas fa-brain"></i> 2. Generate Maneuver Plan
                 </button>
 
-                <!-- Maneuver Info Panel (hidden by default) -->
+                <!-- Maneuver Panel (Hidden) -->
                 <div id="maneuver-panel"
                     style="display: none; margin-top: 10px; padding: 10px; background: rgba(0, 255, 255, 0.1); border-radius: 8px; border: 1px solid rgba(0, 255, 255, 0.3);">
                     <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #00ffff;">🛰️ Optimal Maneuver</h4>
-                    <div class="maneuver-details" style="font-size: 11px; color: #ccc;">
-                        <p style="margin: 5px 0;"><strong>Thrust Direction:</strong> <span id="thrust-dir"
-                                style="color: #00ffff;">-</span></p>
-                        <p style="margin: 5px 0;"><strong>Burn Duration:</strong> <span id="burn-time"
-                                style="color: #00ffff;">-</span> seconds</p>
-                        <p style="margin: 5px 0;"><strong>Execute At:</strong> <span id="exec-time"
-                                style="color: #00ffff;">-</span></p>
-                        <p style="margin: 5px 0;"><strong>Fuel Cost:</strong> <span id="fuel-cost"
-                                style="color: #ff9500;">-</span>%</p>
-                        <p style="margin: 5px 0;"><strong>New Miss Distance:</strong> <span id="new-miss"
-                                style="color: #00ff00;">-</span> km</p>
-                    </div>
+                    <div class="stat-row"><span>Burn Time:</span> <span id="burn-time">--</span>s</div>
+                    <div class="stat-row"><span>Thrust:</span> <span id="thrust-dir">--</span></div>
+                    <div class="stat-row"><span>Time (UTC):</span> <span id="exec-time">--</span></div>
+                    <div class="stat-row"><span>Fuel Cost:</span> <span id="fuel-cost">--</span>%</div>
+                    <div class="stat-row"><span>New Miss:</span> <span id="new-miss">--</span> km</div>
                     <button id="execute-maneuver-btn" class="action-btn"
                         style="width: 100%; background: linear-gradient(45deg, #00ff00, #00cc00); margin-top: 10px; font-size: 12px;">
-                        <i class="fas fa-play"></i> Execute Maneuver (Simulation)
+                        <i class="fas fa-play"></i> Execute Maneuver
                     </button>
+                </div>
+
+                <h3 style="margin-top: 15px; font-size: 0.9rem; color: #ff0055;">Intelligence (Spy Hunter)</h3>
+                <button id="btn-spy-hunter" class="btn danger"
+                    style="background: rgba(255, 0, 0, 0.2); border-color: #ff0000; width: 100%;"
+                    title="Detect anomalous behavior patterns">
+                    3. Detect Anomaly
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- Status Bar -->
+        <div id="status-msg" style="
+            position: fixed; top: 100px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: lime; padding: 5px 15px; border-radius: 20px;
+            font-size: 12px; font-family: monospace; z-index: 999; pointer-events: none;
+        ">System Online</div>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" id="btn-mobile-menu">☰ Mission Control</button>
+
+        <!-- RIGHT SIDEBAR CONTAINER -->
+        <div class="right-sidebar">
+            <!-- Floating Legend (Integrated) -->
+            <div id="main-legend" style="
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            backdrop-filter: blur(5px);
+        ">
+                <h3
+                    style="margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #aaa; letter-spacing: 1px;">
+                    Orbit Key</h3>
+                <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px;">
+                    <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                            style="display:inline-block; width:12px; height:12px; background: magenta; margin-right: 8px; border-radius: 50%;"></span>
+                        Target (Physics)</li>
+                    <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                            style="display:inline-block; width:12px; height:12px; background: cyan; margin-right: 8px; border-radius: 50%;"></span>
+                        Prediction (AI)</li>
+                    <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                            style="display:inline-block; width:12px; height:12px; background: yellow; margin-right: 8px; border-radius: 50%;"></span>
+                        Debris (Tracked)</li>
+                    <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
+                            style="display:inline-block; width:12px; height:12px; background: lime; margin-right: 8px; border-radius: 50%;"></span>
+                        Collision Path</li>
+                </ul>
+            </div>
+
+            <!-- Alerts Dashboard -->
+            <div id="alerts-widget">
+                <div class="chat-header">
+                    <span><i class="fas fa-exclamation-triangle"></i> Collision Alerts</span>
+                    <button id="alerts-toggle"><i class="fas fa-chevron-down"></i></button>
+                </div>
+                <div class="chat-body" id="alerts-list">
+                    <div class="msg ai">No active alerts. System monitoring...</div>
                 </div>
             </div>
 
-            <div id="status-msg">System Online</div>
-
-            <!-- Legend Removed from Sidebar -->
-    </div>
-    </aside>
-    </div>
-
-    <!-- OrbitGPT Chat Widget -->
-    <div id="chat-widget">
-        <div class="chat-header">
-            <span><i class="fas fa-robot"></i> OrbitGPT AI</span>
-            <button id="chat-toggle"><i class="fas fa-chevron-down"></i></button>
+            <!-- Chat Widget -->
+            <div id="chat-widget">
+                <div class="chat-header">
+                    <span><i class="fas fa-robot"></i> OrbitGPT AI</span>
+                    <button id="chat-toggle"><i class="fas fa-chevron-down"></i></button>
+                </div>
+                <div class="chat-body" id="chat-history">
+                    <div class="msg ai">Hello! I am monitoring the satellite trajectory. Ask me about collision risks or
+                        orbit
+                        parameters.</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Ask OrbitGPT...">
+                    <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
         </div>
-        <div class="chat-body" id="chat-history">
-            <div class="msg ai">Hello! I am monitoring the satellite trajectory. Ask me about collision risks or orbit
-                parameters.</div>
-        </div>
-        <div class="chat-input-area">
-            <input type="text" id="chat-input" placeholder="Ask OrbitGPT...">
-            <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
-        </div>
-    </div>
 
-    <!-- Alerts Dashboard (Screener Output) -->
-    <div id="alerts-widget">
-        <div class="chat-header">
-            <span><i class="fas fa-exclamation-triangle"></i> Collision Alerts</span>
-            <button id="alerts-toggle"><i class="fas fa-chevron-down"></i></button>
-        </div>
-        <div class="chat-body" id="alerts-list">
-            <div class="msg ai">No active alerts. System monitoring...</div>
-        </div>
-    </div>
+        <!-- Alerts Dashboard (Screener Output) -->
 
-    <!-- Floating Legend (Moved to Main View) -->
-    <div id="main-legend" style="
-        position: fixed; top: 100px; right: 20px;
-        background: rgba(0, 0, 0, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 15px;
-        border-radius: 8px;
-        color: white;
-        z-index: 1050;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        backdrop-filter: blur(5px);
-        max-width: 250px;
-    ">
-        <h3 style="margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #aaa; letter-spacing: 1px;">
-            Orbit Key</h3>
-        <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px;">
-            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
-                    style="display:inline-block; width:12px; height:12px; background: magenta; margin-right: 8px; border-radius: 50%;"></span>
-                Target (Physics)</li>
-            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
-                    style="display:inline-block; width:12px; height:12px; background: cyan; margin-right: 8px; border-radius: 50%;"></span>
-                Prediction (AI)</li>
-            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
-                    style="display:inline-block; width:12px; height:12px; background: yellow; margin-right: 8px; border-radius: 50%;"></span>
-                Debris (Tracked)</li>
-            <li style="margin-bottom: 5px; display: flex; align-items: center;"><span
-                    style="display:inline-block; width:12px; height:12px; background: lime; margin-right: 8px; border-radius: 50%;"></span>
-                Collision Path</li>
-        </ul>
-    </div>
 
-    <script type="module" src="js/maneuver.js"></script>
-    <script type="module" src="js/main.js"></script>
+        <!-- Floating Legend (Moved to Main View) -->
+
+
+        <script type="module" src="js/maneuver.js?v=4.0"></script>
+        <script type="module" src="js/main.js?v=4.0"></script>
 </body>
 
 </html>
