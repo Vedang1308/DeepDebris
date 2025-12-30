@@ -39,6 +39,9 @@ public class InfluxDbConfig {
         String safeOrg = (org != null) ? org : "deepdebris";
         String safeBucket = (bucket != null) ? bucket : "tle_history";
 
-        return InfluxDBClientFactory.create(safeUrl, safeToken.toCharArray(), safeOrg, safeBucket);
+        // Convert to char array with explicit null safety
+        char[] tokenChars = safeToken.toCharArray();
+
+        return InfluxDBClientFactory.create(safeUrl, tokenChars, safeOrg, safeBucket);
     }
 }
