@@ -12,8 +12,8 @@ from sgp4.api import Satrec, jday
 from datetime import datetime, timedelta, timezone
 import math
 
-class MockSatrec:
-    """Mock Satellite object for simplified physics training."""
+class LinearPropagator:
+    """Linearized Physics Propagator for simplified physics training and short-term prediction."""
     def __init__(self, r, v, epoch_offset=0.0, q=None, w=None):
         self.r = np.array(r, dtype=np.float64)
         self.v = np.array(v, dtype=np.float64)
@@ -21,7 +21,7 @@ class MockSatrec:
         self.q = np.array(q if q is not None else [1.0, 0.0, 0.0, 0.0], dtype=np.float64)
         self.w = np.array(w if w is not None else [0.0, 0.0, 0.0], dtype=np.float64)
         self.epoch_offset = epoch_offset
-        self.is_mock = True
+        self.is_linear = True # Renamed from is_mock
         
     def update_state(self, current_time_offset, new_vel, new_w=None):
         """Update state (re-epoch) to apply a velocity change at a specific time."""
@@ -286,7 +286,7 @@ class SpaceGym(gym.Env):
         new_vel = np.array(sat_vel) + thrust_vector * self.delta_v_per_action
         
         # Update satellite TLE with new velocity
-        if hasattr(self.sat_satrec, 'is_mock'):
+        if hasattr(self.sat_satrec, 'is_linear'):
             self.sat_satrec.update_state(self.sim_elapsed, new_vel)
         else:
             self.sat_satrec = self._update_satrec_velocity(self.sat_satrec, new_vel)
@@ -309,14 +309,14 @@ class SpaceGym(gym.Env):
         new_w = sat_w + alpha * (deb_w - sat_w)
         
         # Update state
-        if hasattr(self.sat_satrec, 'is_mock'):
+        if hasattr(self.sat_satrec, 'is_linear'):
              # We only update w, not r/v
              self.sat_satrec.w = new_w
         else:
-             # If real TLE, we convert to Mock to store state
+             # If real TLE, we convert to LinearPropagator to store state
              # This is a bit tricky, similar to velocity update
              sat_pos, sat_vel = self._propagate_satellite(self.sat_satrec, self.sim_elapsed)
-             self.sat_satrec = MockSatrec(sat_pos, sat_vel, epoch_offset=self.sim_elapsed, w=new_w)
+             self.sat_satrec = LinearPropagator(sat_pos, sat_vel, epoch_offset=self.sim_elapsed, w=new_w)
              
         # Small fuel cost for AOCS (Attitude Control)
         self.fuel_remaining -= 0.01
@@ -347,8 +347,8 @@ class SpaceGym(gym.Env):
     
     def _propagate_satellite(self, satrec, time_offset_seconds=0):
         """Propagate satellite position and velocity."""
-        # Handle Mock Satellites (Linear Physics)
-        if hasattr(satrec, 'is_mock'):
+        # Handle Linear Propagators (Linear Physics)
+        if hasattr(satrec, 'is_linear'):
             # Linear propagation relative to its epoch
             dt = time_offset_seconds - satrec.epoch_offset
             r = satrec.r + satrec.v * dt
@@ -398,8 +398,8 @@ class SpaceGym(gym.Env):
         return min_distance
     
     def _parse_tle(self, tle):
-        """Parse TLE into Satrec object (or pass through Mock)."""
-        if isinstance(tle, MockSatrec):
+        """Parse TLE into Satrec object (or pass through LinearPropagator)."""
+        if isinstance(tle, LinearPropagator):
             return tle
             
         if isinstance(tle, dict):
@@ -427,8 +427,8 @@ class SpaceGym(gym.Env):
     
     def _update_satrec_velocity(self, satrec, new_vel):
         """Update Satrec with new velocity."""
-        # Handle Mock Satellite
-        if hasattr(satrec, 'is_mock'):
+        # Handle Linear Propagator
+        if hasattr(satrec, 'is_linear'):
             satrec.v = np.array(new_vel, dtype=np.float64)
             return satrec
 
@@ -438,10 +438,10 @@ class SpaceGym(gym.Env):
         # 1. Get current position (at sim_elapsed)
         curr_r, _ = self._propagate_satellite(satrec, self.sim_elapsed)
         
-        # 2. Create MockSatrec starting from NOW with NEW Velocity
+        # 2. Create LinearPropagator starting from NOW with NEW Velocity
         # This linearizes the physics from the maneuver point onwards.
         # It's a valid approximation for short-term maneuver visualization (hours).
-        new_sat = MockSatrec(curr_r, new_vel, epoch_offset=self.sim_elapsed)
+        new_sat = LinearPropagator(curr_r, new_vel, epoch_offset=self.sim_elapsed)
         
         # Preserve angular velocity if present
         if hasattr(satrec, 'w'):
@@ -484,7 +484,7 @@ class SpaceGym(gym.Env):
         ]
         
         # Create Mock Objects
-        # Note: We return MockSatrec objects directly?
+        # Note: We return LinearPropagator objects directly?
         # But reset() expects TLE dictionary or calls this.
         # This function signature returns (sat_tle, deb_tle, tca).
         # We need to hack it to store the objects OR return Mock objects as "TLEs" 
@@ -494,12 +494,12 @@ class SpaceGym(gym.Env):
         # We should modify reset logic? 
         # Or make _parse_tle handle Mock objects passed through?
         
-        # Hack: Return MockSatrec as the "TLE". 
+        # Hack: Return LinearPropagator as the "TLE". 
         # And update _parse_tle to pass it through.
         
-        sat_obj = MockSatrec(sat_r, sat_v)
+        sat_obj = LinearPropagator(sat_r, sat_v)
         # Give debris some tumble [0.1, 0.05, -0.02]
-        deb_obj = MockSatrec(deb_r, deb_v, w=[0.1, 0.05, -0.02])
+        deb_obj = LinearPropagator(deb_r, deb_v, w=[0.1, 0.05, -0.02])
         
         tca_dt = datetime.now(timezone.utc) + timedelta(seconds=t_collision)
         
