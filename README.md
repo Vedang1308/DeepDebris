@@ -8,7 +8,7 @@
 
 **DeepDebris 4.0** is an operational simulation of a modern Space Operations Center (SOC). Unlike standard visualizations, it enforces strict **Physics-Based Operational Constraints** and integrates a **Cyber-Physical Firewall** to prevent spoofed data injection. It features a suite of AI agents ("OrbitGPT", "Diplomat", "Screener") to assist operators in collision avoidance and maneuver negotiation.
 
-![Dashboard Proof](file:///Users/vedangavaghade/.gemini/antigravity/brain/8e024dcb-1b90-43ee-a104-33d585362a2a/dashboard_proof_1767143979290.png)
+![Dashboard Proof](docs/img/dashboard_proof.png)
 
 ---
 
