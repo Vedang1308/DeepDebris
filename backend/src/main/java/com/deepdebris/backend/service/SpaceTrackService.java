@@ -6,9 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -28,9 +25,9 @@ public class SpaceTrackService {
         if (username != null && !username.isEmpty() && password != null && !password.isEmpty()) {
             fetchRealData();
         } else {
-            log.info("Fetching TLE data (mocked) - No credentials provided.");
-            List<TleData> mockData = generateMockData();
-            mockData.forEach(tleProducer::sendTleUpdate);
+            log.error(
+                    "CRITICAL: No Space-Track credentials provided. Cannot fetch REAL data. System will not function.");
+            throw new RuntimeException("Space-Track credentials missing. Strict Real Data Mode active.");
         }
     }
 
@@ -65,22 +62,8 @@ public class SpaceTrackService {
             }
         } catch (Exception e) {
             log.error("Error fetching from Space-Track: {}", e.getMessage());
-            // Fallback
-            List<TleData> mockData = generateMockData();
-            mockData.forEach(tleProducer::sendTleUpdate);
+            throw new RuntimeException("Failed to fetch REAL data from Space-Track.", e);
         }
     }
 
-    private List<TleData> generateMockData() {
-        // Return some dummy TLEs (ISS, Hubble)
-        return List.of(
-                new TleData("25544", "ISS (ZARYA)",
-                        "1 25544U 98067A   23356.54321689  .00016717  00000+0  30283-3 0  9997",
-                        "2 25544  51.6416  21.9684 0005432  35.2163  86.1264 15.49507156430342",
-                        Instant.now().toString()),
-                new TleData("20580", "HUBBLE SPACE TELESCOPE",
-                        "1 20580U 90037B   23355.12345678  .00001234  00000+0  12345-4 0  9993",
-                        "2 20580  28.4699 123.4567 0001234  12.3456 123.4567 15.09345678 12345",
-                        Instant.now().toString()));
-    }
 }

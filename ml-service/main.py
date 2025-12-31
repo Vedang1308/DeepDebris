@@ -41,33 +41,19 @@ cdm_service = CDMService()
 vision_api = VisionAPI() # Initialize VisionAPI
 servo_controller = VisualServoController() # Initialize Visual Servo Controller
 # Initialize OrbitGPT (Ingest on startup for demo)
-# Initialize OrbitGPT (Ingest on startup for demo)
-orbit_gpt = None
-try:
-    orbit_gpt = OrbitGPTEngine(cdm_service)
-    print("Ingesting initial CDMs...")
-    orbit_gpt.ingest_cdms()
-    print("OrbitGPT Ready.")
-except Exception as e:
-    print(f"⚠ OrbitGPT Init Failed (Non-Critical): {e}")
-    # Create a dummy or handle None usage in endpoints
-    class DummyOrbitGPT:
-        def ask(self, query): return "System Error: Analyst Offline."
-    orbit_gpt = DummyOrbitGPT()
+orbit_gpt = OrbitGPTEngine(cdm_service)
+print("Ingesting initial CDMs...")
+orbit_gpt.ingest_cdms()
+print("OrbitGPT Ready.")
 
 # --- DeepDebris 4.0: Spy Hunter ---
 from anomaly_detector import SpyHunter
 from history_fetcher import HistoryFetcher
 
 # Lazy loading to prevent crash if model missing
-try:
-    spy_hunter = SpyHunter()
-    history_fetcher = HistoryFetcher()
-    print("✓ SpyHunter & HistoryFetcher Initialized")
-except Exception as e:
-    print(f"⚠ SpyHunter Init Failed: {e}")
-    spy_hunter = None
-    history_fetcher = None
+spy_hunter = SpyHunter()
+history_fetcher = HistoryFetcher()
+print("✓ SpyHunter & HistoryFetcher Initialized")
 
 # --- Adaptive Architecture: Background Scheduler (Production Mode) ---
 # "What works better": A hybrid. We fetch on startup and then scheduled.
@@ -213,17 +199,15 @@ learner = ContinuousLearner(model, model_path="residual_model_probabilistic.pth"
 
 # --- DeepDebris 3.0: Load RL Maneuver Agent ---
 maneuver_agent = None
-try:
-    from stable_baselines3 import PPO
-    from rl.space_gym import SpaceGym, action_to_vector, calculate_burn_time, calculate_optimal_time
-    
-    if os.path.exists("rl/models/maneuver_agent_v6.zip"):
-        maneuver_agent = PPO.load("rl/models/maneuver_agent_v6.zip")
-        print("✓ Loaded RL Maneuver Agent (DeepDebris v6.0 - Corrected Physics)")
-    else:
-        print("⚠ RL Maneuver Agent v6 not found. Train with: python rl/train_maneuver_agent.py")
-except Exception as e:
-    print(f"⚠ RL Agent unavailable: {e}")
+from stable_baselines3 import PPO
+from rl.space_gym import SpaceGym, action_to_vector, calculate_burn_time, calculate_optimal_time
+
+if os.path.exists("rl/models/maneuver_agent_v6.zip"):
+    maneuver_agent = PPO.load("rl/models/maneuver_agent_v6.zip")
+    print("✓ Loaded RL Maneuver Agent (DeepDebris v6.0 - Corrected Physics)")
+else:
+    # Strict Mode: Crash if model is missing
+    raise FileNotFoundError("RL Maneuver Agent v6 not found. Train with: python rl/train_maneuver_agent.py")
 
 # ... Imports ...
 from screener import MatrixScreener
@@ -242,39 +226,23 @@ spy_hunter = SpyHunter() # Loads untrained model (acceptable for MVP)
 history_fetcher = HistoryFetcher()
 # --- DeepDebris 5.0: The Diplomat ---
 from diplomat.diplomat_agents import DiplomatSystem
-try:
-    diplomat = DiplomatSystem()
-    print("✓ The Diplomat (Multi-Agent System) Initialized")
-except Exception as e:
-    print(f"⚠ Diplomat Init Failed: {e}")
-    diplomat = None
+diplomat = DiplomatSystem()
+print("✓ The Diplomat (Multi-Agent System) Initialized")
 
 # --- DeepDebris 4.0: Cyber-Physical Security ---
-try:
-    from anomaly_detector import PhysicsValidator
-    physics_fw = PhysicsValidator()
-    print("✓ Cyber-Physical Firewall Online (Keplerian Logic)")
-except Exception as e:
-    print(f"⚠ PhysicsValidator Init Failed: {e}")
-    physics_fw = None
+from anomaly_detector import PhysicsValidator
+physics_fw = PhysicsValidator()
+print("✓ Cyber-Physical Firewall Online (Keplerian Logic)")
 
 # --- DeepDebris 4.0: Constellation Fleet Manager ---
-try:
-    from diplomat.fleet_manager import FleetManager
-    fleet_svc = FleetManager(size=50) # Simulate 50-sat constellation
-    print("✓ Fleet Manager Online (Antifratricide System)")
-except Exception as e:
-    print(f"⚠ Fleet Manager Init Failed: {e}")
-    fleet_svc = None
+from diplomat.fleet_manager import FleetManager
+fleet_svc = FleetManager(size=50) # Simulate 50-sat constellation
+print("✓ Fleet Manager Online (Antifratricide System)")
 
 # --- DeepDebris 4.0: Ground Link (Pass Scheduler) ---
-try:
-    from pass_scheduler import PassScheduler
-    pass_scheduler_svc = PassScheduler() # Default: Maui
-    print("✓ Ground Link Scheduler Online (Maui Station)")
-except Exception as e:
-    print(f"⚠ PassScheduler Init Failed: {e}")
-    pass_scheduler_svc = None
+from pass_scheduler import PassScheduler
+pass_scheduler_svc = PassScheduler() # Default: Maui
+print("✓ Ground Link Scheduler Online (Maui Station)")
 
 # --- CONSTANTS ---
 

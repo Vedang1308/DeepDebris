@@ -59,7 +59,9 @@ def create_dataset():
                     residual = pos_truth - pos_pred
                     
                     # Features: [Flux, Kp, X, Y, Z]
-                    # Mocking Flux/Kp as random for this demo since we don't have historical space weather loaded yet
+                    # DEPRECATED WARNING: Mocking Flux/Kp is legacy behavior. 
+                    # TODO: Integrate with WeatherService history for strict realism.
+                    print("WARN: Using synthetic noise for historical Flux/Kp. This needs real data update.")
                     flux = 150.0 + np.random.randn() * 20
                     kp = 3.0 + np.random.randn() * 1
                     

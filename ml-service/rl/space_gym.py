@@ -119,9 +119,9 @@ class SpaceGym(gym.Env):
         """Reset environment to initial state."""
         super().reset(seed=seed)
         
-        # If no TLE provided, generate random collision scenario
+        # If no TLE provided, raise Error (Strict Real Mode)
         if self.sat_tle is None or self.debris_tle is None:
-            self.sat_tle, self.debris_tle, self.tca = self._generate_random_scenario()
+            raise ValueError("SpaceGym: Missing TLE data. 'Random Mock Scenario' is disabled. You must provide real TLEs.")
         
         # Parse TLEs
         self.sat_satrec = self._parse_tle(self.sat_tle)
@@ -449,61 +449,7 @@ class SpaceGym(gym.Env):
             
         return new_sat
     
-    def _generate_random_scenario(self):
-        """Generate deterministic collision scenario using Mock Physics."""
-        # Scenario: Collision in 15 minutes (900s)
-        t_collision = 900
-        
-        # Satellite: LEO orbit (Simplified Linear)
-        # Position: [7000 km, 0, 0]
-        # Velocity: [0, 7.5 km/s, 0] (Along Y axis)
-        sat_r = [7000.0, 0.0, 0.0]
-        sat_v = [0.0, 7.5, 0.0]
-        
-        # Debris: Impact course
-        # Starts 10km away in Z axis (Cross-track)
-        # MUST arrive at Satellite's future position at T=900
-        
-        # Sat Position @ T=900:
-        target_r = [
-            sat_r[0] + sat_v[0] * t_collision,
-            sat_r[1] + sat_v[1] * t_collision,
-            sat_r[2] + sat_v[2] * t_collision
-        ] # [7000, 6750, 0]
-        
-        # Debris Start Position:
-        # Same X/Y, but Z is offset by 10km
-        deb_r = [7000.0, 0.0, 10.0]
-        
-        # Debris Required Velocity to hit Target:
-        # V = (Target - Start) / T
-        deb_v = [
-            (target_r[0] - deb_r[0]) / t_collision,
-            (target_r[1] - deb_r[1]) / t_collision,
-            (target_r[2] - deb_r[2]) / t_collision
-        ]
-        
-        # Create Mock Objects
-        # Note: We return LinearPropagator objects directly?
-        # But reset() expects TLE dictionary or calls this.
-        # This function signature returns (sat_tle, deb_tle, tca).
-        # We need to hack it to store the objects OR return Mock objects as "TLEs" 
-        # and handle them in reset.
-        
-        # But wait, reset() calls _parse_tle. 
-        # We should modify reset logic? 
-        # Or make _parse_tle handle Mock objects passed through?
-        
-        # Hack: Return LinearPropagator as the "TLE". 
-        # And update _parse_tle to pass it through.
-        
-        sat_obj = LinearPropagator(sat_r, sat_v)
-        # Give debris some tumble [0.1, 0.05, -0.02]
-        deb_obj = LinearPropagator(deb_r, deb_v, w=[0.1, 0.05, -0.02])
-        
-        tca_dt = datetime.now(timezone.utc) + timedelta(seconds=t_collision)
-        
-        return sat_obj, deb_obj, tca_dt.isoformat()
+
     
     def simulate_maneuver(self, action):
         """
