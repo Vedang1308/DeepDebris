@@ -42,7 +42,7 @@ if data_source == "Live Space-Track Data":
         try:
             with st.spinner(f"Connecting to USSTRATCOM..."):
                 # Call ML Service to get TLE (it handles Auth or Mock)
-                resp = requests.get(f"http://localhost:8000/tle/{sat_id}")
+                resp = requests.get(f"http://localhost:8002/tle/{sat_id}")
                 resp.raise_for_status()
                 tle_data = resp.json()
                 
@@ -97,7 +97,7 @@ def update_weather_scenario():
     if scen == "Live NOAA Data (Real-Time)":
         try:
             with st.spinner("Fetching live NOAA data..."):
-                resp = requests.get("http://localhost:8000/weather/live")
+                resp = requests.get("http://localhost:8002/weather/live")
                 data = resp.json()
                 st.session_state['flux'] = data['flux']
                 st.session_state['kp'] = data['kp']
@@ -167,7 +167,7 @@ if st.button("🚀 Step 3: Run Prediction (Next 3 Orbits)"):
     
     try:
         with st.spinner("Calculating high-resolution trajectory..."):
-            response = requests.post("http://localhost:8000/predict_batch", json=payload)
+            response = requests.post("http://localhost:8002/predict_batch", json=payload)
             response.raise_for_status()
             batch_data = response.json()
             
@@ -559,7 +559,7 @@ if prompt := st.chat_input("Ask OrbitGPT (e.g., 'Summarize high risk alerts')...
         try:
             with st.spinner("Analyzing CDMs..."):
                 # Call RAG Endpoint
-                resp = requests.post("http://localhost:8000/chat", json={"query": prompt})
+                resp = requests.post("http://localhost:8002/chat", json={"query": prompt})
                 full_response = resp.json().get("response", "Error: No response from OrbitGPT")
         except Exception as e:
             full_response = f"Error connecting to OrbitGPT: {e}"

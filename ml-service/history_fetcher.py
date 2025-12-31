@@ -45,9 +45,16 @@ class HistoryFetcher:
         try:
             resp = self.session.get(full_url)
             if resp.status_code != 200:
+                print(f"Spy Hunter Error: API returned status {resp.status_code}")
                 return []
             
-            data = resp.json()
+            # Check if response is JSON before parsing
+            try:
+                data = resp.json()
+            except json.JSONDecodeError as je:
+                print(f"Spy Hunter Error: Response is not valid JSON. Content: {resp.text[:100]}")
+                return []
+            
             # Extract features: [Inc, Ecc, MeanMotion, BStar]
             features = []
             for tle in data:
@@ -62,5 +69,6 @@ class HistoryFetcher:
             return features
             
         except Exception as e:
-            print(f"Fetch Error: {e}")
+            print(f"Spy Hunter Error: {e}")
             return []
+

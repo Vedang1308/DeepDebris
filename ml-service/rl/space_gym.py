@@ -9,7 +9,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 from sgp4.api import Satrec, jday
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 
 class MockSatrec:
@@ -67,20 +67,30 @@ class SpaceGym(gym.Env):
     
     metadata = {'render_modes': []}
     
-    def __init__(self, sat_tle=None, debris_tle=None, tca=None, max_fuel=100.0):
+    def __init__(self, sat_tle=None, debris_tle=None, tca=None, max_fuel=100.0, use_angular_velocity=False):
         super().__init__()
+        
+        # Compatibility mode for trained agents
+        self.use_angular_velocity = use_angular_velocity
         
         # Action space: 8 discrete actions (wait + 6 thrust + 1 servo)
         self.action_space = spaces.Discrete(8)
         
-        # Observation space: 
-        # [rel_pos(3), rel_vel(3), rel_w(3), time_to_tca(1), fuel(1)]
-        # Total dims: 11
-        self.observation_space = spaces.Box(
-            low=np.array([-10000, -10000, -10000, -10, -10, -10, -5, -5, -5, 0, 0]),
-            high=np.array([10000, 10000, 10000, 10, 10, 10, 5, 5, 5, 86400, 100]),
-            dtype=np.float32
-        )
+        # Observation space depends on compatibility mode
+        if use_angular_velocity:
+            # 11 dims: [rel_pos(3), rel_vel(3), rel_w(3), time_to_tca(1), fuel(1)]
+            self.observation_space = spaces.Box(
+                low=np.array([-10000, -10000, -10000, -10, -10, -10, -5, -5, -5, 0, 0]),
+                high=np.array([10000, 10000, 10000, 10, 10, 10, 5, 5, 5, 86400, 100]),
+                dtype=np.float32
+            )
+        else:
+            # 8 dims: [rel_pos(3), rel_vel(3), time_to_tca(1), fuel(1)] - Compatible with v6 agent
+            self.observation_space = spaces.Box(
+                low=np.array([-10000, -10000, -10000, -10, -10, -10, 0, 0]),
+                high=np.array([10000, 10000, 10000, 10, 10, 10, 86400, 100]),
+                dtype=np.float32
+            )
         
         # Environment state
         self.sat_tle = sat_tle
@@ -122,9 +132,9 @@ class SpaceGym(gym.Env):
         self.current_step = 0
         self.initial_tca_time = self._parse_time(self.tca)
         
-        # Reset Sim Time
+        # Reset Sim Time (use timezone-aware datetime)
         self.sim_elapsed = 0.0
-        self.start_utc = datetime.utcnow()
+        self.start_utc = datetime.now(timezone.utc)
         
         # Get initial observation
         obs = self._get_observation()
@@ -174,22 +184,28 @@ class SpaceGym(gym.Env):
         current_sim_time = self.start_utc + timedelta(seconds=self.sim_elapsed)
         time_to_tca = (self.initial_tca_time - current_sim_time).total_seconds()
         
-        # Construct observation
-        # Relative Angular Velocity
-        # If real Satrec, assume w=[0,0,0] (stabilized). If Mock, use state.
-        sat_w = getattr(self.sat_satrec, 'w', np.array([0.,0.,0.]))
-        deb_w = getattr(self.debris_satrec, 'w', np.array([0.1, 0.05, -0.02])) # Debris tumbles
-        
-        rel_w = deb_w - sat_w
-        
-        # Construct observation
-        obs = np.array([
-            rel_pos[0], rel_pos[1], rel_pos[2],
-            rel_vel[0], rel_vel[1], rel_vel[2],
-            rel_w[0], rel_w[1], rel_w[2],
-            time_to_tca,
-            self.fuel_remaining
-        ], dtype=np.float32)
+        # Construct observation based on compatibility mode
+        if self.use_angular_velocity:
+            # 11-dimensional observation (with angular velocity)
+            sat_w = getattr(self.sat_satrec, 'w', np.array([0.,0.,0.]))
+            deb_w = getattr(self.debris_satrec, 'w', np.array([0.1, 0.05, -0.02])) # Debris tumbles
+            rel_w = deb_w - sat_w
+            
+            obs = np.array([
+                rel_pos[0], rel_pos[1], rel_pos[2],
+                rel_vel[0], rel_vel[1], rel_vel[2],
+                rel_w[0], rel_w[1], rel_w[2],
+                time_to_tca,
+                self.fuel_remaining
+            ], dtype=np.float32)
+        else:
+            # 8-dimensional observation (without angular velocity) - Compatible with v6 agent
+            obs = np.array([
+                rel_pos[0], rel_pos[1], rel_pos[2],
+                rel_vel[0], rel_vel[1], rel_vel[2],
+                time_to_tca,
+                self.fuel_remaining
+            ], dtype=np.float32)
         
         return obs
     
@@ -340,7 +356,7 @@ class SpaceGym(gym.Env):
             return r, v
 
         # Get current time + offset
-        now = datetime.utcnow() + timedelta(seconds=time_offset_seconds)
+        now = datetime.now(timezone.utc) + timedelta(seconds=time_offset_seconds)
         jd, fr = jday(now.year, now.month, now.day, now.hour, now.minute, now.second)
         
         # Propagate
@@ -355,7 +371,7 @@ class SpaceGym(gym.Env):
     def _calculate_miss_distance(self):
         """Calculate minimum distance between satellite and debris near TCA."""
         # Optimization: Check +/- 30 mins around initial TCA
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         tca_offset = (self.initial_tca_time - current_time).total_seconds()
         
         # Define window (seconds relative to now)
@@ -398,9 +414,16 @@ class SpaceGym(gym.Env):
     def _parse_time(self, time_str):
         """Parse time string to datetime."""
         if isinstance(time_str, datetime):
-            return time_str
-        # Assume ISO format
-        return datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+            dt = time_str
+        else:
+            # Assume ISO format
+            dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+            
+        # Ensure it's timezone aware (UTC)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+            
+        return dt
     
     def _update_satrec_velocity(self, satrec, new_vel):
         """Update Satrec with new velocity."""
@@ -478,7 +501,7 @@ class SpaceGym(gym.Env):
         # Give debris some tumble [0.1, 0.05, -0.02]
         deb_obj = MockSatrec(deb_r, deb_v, w=[0.1, 0.05, -0.02])
         
-        tca_dt = datetime.utcnow() + timedelta(seconds=t_collision)
+        tca_dt = datetime.now(timezone.utc) + timedelta(seconds=t_collision)
         
         return sat_obj, deb_obj, tca_dt.isoformat()
     
@@ -502,6 +525,10 @@ class SpaceGym(gym.Env):
         
         # Calculate new miss distance
         miss_distance = self._calculate_miss_distance()
+        
+        # Cap infinity to a large finite value for JSON serialization
+        if np.isinf(miss_distance):
+            miss_distance = 1000000.0  # 1 million km (very safe)
         
         return trajectory, fuel_cost, miss_distance
 

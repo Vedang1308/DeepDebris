@@ -797,11 +797,12 @@ def plan_maneuver(request: ManeuverRequest):
         )
     
     try:
-        # Create environment with current scenario
+        # Create environment with current scenario (8-dim mode for v6 agent compatibility)
         env = SpaceGym(
             sat_tle=request.sat_tle,
             debris_tle=request.debris_tle,
-            tca=request.tca
+            tca=request.tca,
+            use_angular_velocity=False  # v6 agent trained without angular velocity
         )
         
         # Get initial observation
@@ -969,13 +970,16 @@ async def analyze_behavior_endpoint(norad_id: int):
     # 2. Run Inference
     res = spy_hunter.analyze_behavior(history)
     
+    # SpyHunter returns: {'threat_level': 'HIGH' or 'NOMINAL'}
+    is_anomaly = res.get('threat_level') == 'HIGH'
+    
     return {
         "norad_id": norad_id,
-        "is_anomaly": res['is_anomaly'],
-        "anomaly_score": res['score'],
-        "threat_level": res['threat_level'],
+        "is_anomaly": is_anomaly,
+        "anomaly_score": res.get('anomaly_score', 0.0),
+        "threat_level": res.get('threat_level', 'UNKNOWN'),
         "data_points": len(history),
-        "analysis": "Object behavior diverges from ballistic trajectory." if res['is_anomaly'] else "Object follows expected orbital decay."
+        "analysis": "Object behavior diverges from ballistic trajectory." if is_anomaly else "Object follows expected orbital decay."
     }
 
 # Static Files (Mount LAST to
@@ -990,5 +994,4 @@ else:
 # Start Server
 if __name__ == "__main__":
     import uvicorn
-
-
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -120,6 +120,7 @@ class SpyHunter:
         THRESH = 1.0 
         
         return {
+            'anomaly_score': score,
             'threat_level': 'HIGH' if score > THRESH else 'NOMINAL'
         }
 

@@ -954,6 +954,9 @@ async function drawDebrisOrbits() {
                 }
                 btn.innerHTML = '<i class="fas fa-search-location"></i> 1. Analyze Collision Risks';
 
+                // CRITICAL FIX: Update global window.currentRisks for maneuver.js
+                window.currentRisks = currentRisks;
+
                 // Enable Generate Maneuver button when risks are found
                 const maneuverBtn = document.getElementById('btn-generate-maneuver');
                 if (maneuverBtn && currentRisks.length > 0) {
