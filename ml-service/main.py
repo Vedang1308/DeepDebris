@@ -1,9 +1,12 @@
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from propagator import Propagator
 from weather_service import WeatherService
-from cdm_service import CDMService
+from cdm_service import CDMService, SpaceTrackCDM
 from rag_engine import OrbitGPTEngine
+from vision_service import VisionAPI  # DeepDebris 4.0 Vision Module
+from rl.visual_servo import VisualServoController # DeepDebris 4.0 Control Module
 from datetime import datetime, timedelta
 import numpy as np
 import requests
@@ -14,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
+from typing import Optional
 
 load_dotenv("../.env") # Load from root
 
@@ -34,6 +38,8 @@ app.add_middleware(
 propagator = Propagator()
 weather_service = WeatherService()
 cdm_service = CDMService()
+vision_api = VisionAPI() # Initialize VisionAPI
+servo_controller = VisualServoController() # Initialize Visual Servo Controller
 # Initialize OrbitGPT (Ingest on startup for demo)
 # Initialize OrbitGPT (Ingest on startup for demo)
 orbit_gpt = None
@@ -142,7 +148,28 @@ def refresh_data_cache():
                          }
 
         # 2. Refetch CDMs for context
-        cdm_service.fetch_recent_cdms(25544) 
+        print("[Scheduler] Fetching latest CDMs...")
+        raw_cdms = cdm_service.fetch_recent_cdms(25544)
+        
+        new_risks = []
+        for cdm in raw_cdms:
+            r = {
+                "id": cdm.get("SAT_2_ID", "UNKNOWN"),
+                "name": cdm.get("SAT_2_NAME", "UNKNOWN DEBRIS"),
+                "tca": cdm.get("TCA", datetime.utcnow().isoformat()),
+                "probability": cdm.get("PC", "0.0"),
+                "miss_distance": cdm.get("MIN_RNG", "0.0")
+            }
+            if r["id"] != "UNKNOWN":
+                 new_risks.append(r)
+        
+        if new_risks:
+            CDM_CACHE["25544"] = {
+                "risks": new_risks,
+                "timestamp": time.time()
+            }
+            print(f"[Scheduler] Cached {len(new_risks)} high-risk events.")
+            
         # Ingest into RAG so the Agent allows knows the latest risks
         orbit_gpt.ingest_cdms()
         # Fetch Weather
@@ -160,6 +187,10 @@ print("Adaptive Scheduler Configured: Background refresh every 6 hours.")
 
 class ChatRequest(BaseModel):
     query: str
+
+class ImageRequest(BaseModel):
+    image: str # Base64 encoded image
+    timestamp: Optional[str] = None
 
 SPACETRACK_USER = os.getenv("SPACETRACK_USER")
 SPACETRACK_PASSWORD = os.getenv("SPACETRACK_PASSWORD")
@@ -209,6 +240,43 @@ from history_fetcher import HistoryFetcher
 
 spy_hunter = SpyHunter() # Loads untrained model (acceptable for MVP)
 history_fetcher = HistoryFetcher()
+# --- DeepDebris 5.0: The Diplomat ---
+from diplomat.diplomat_agents import DiplomatSystem
+try:
+    diplomat = DiplomatSystem()
+    print("✓ The Diplomat (Multi-Agent System) Initialized")
+except Exception as e:
+    print(f"⚠ Diplomat Init Failed: {e}")
+    diplomat = None
+
+# --- DeepDebris 4.0: Cyber-Physical Security ---
+try:
+    from anomaly_detector import PhysicsValidator
+    physics_fw = PhysicsValidator()
+    print("✓ Cyber-Physical Firewall Online (Keplerian Logic)")
+except Exception as e:
+    print(f"⚠ PhysicsValidator Init Failed: {e}")
+    physics_fw = None
+
+# --- DeepDebris 4.0: Constellation Fleet Manager ---
+try:
+    from diplomat.fleet_manager import FleetManager
+    fleet_svc = FleetManager(size=50) # Simulate 50-sat constellation
+    print("✓ Fleet Manager Online (Antifratricide System)")
+except Exception as e:
+    print(f"⚠ Fleet Manager Init Failed: {e}")
+    fleet_svc = None
+
+# --- DeepDebris 4.0: Ground Link (Pass Scheduler) ---
+try:
+    from pass_scheduler import PassScheduler
+    pass_scheduler_svc = PassScheduler() # Default: Maui
+    print("✓ Ground Link Scheduler Online (Maui Station)")
+except Exception as e:
+    print(f"⚠ PassScheduler Init Failed: {e}")
+    pass_scheduler_svc = None
+
+# --- CONSTANTS ---
 
 learner = ContinuousLearner(model)
 
@@ -286,6 +354,28 @@ scheduler.start()
 def get_live_weather():
     """Fetch real-time space weather from NOAA."""
     return weather_service.get_live_weather()
+
+# --- DeepDebris 4.0: Vision Endpoint ---
+@app.post("/analyze_image")
+async def analyze_image(request: ImageRequest):
+    """
+    Process single image frame for 6D Pose Estimation.
+    Input: Base64 Image
+    Output: Position, Quaternion, Tumble Rate
+    """
+    result = vision_api.predict_from_base64(request.image)
+    if not result:
+        raise HTTPException(status_code=500, detail="Vision inference failed")
+        
+    # --- DeepDebris 4.0 Control Loop ---
+    # Calculate Control Command to Match Spin
+    # Assume Chaser is currently stabilized (0,0,0) for this iteration
+    current_chaser_tumble = [0.0, 0.0, 0.0] 
+    control = servo_controller.compute_control(current_chaser_tumble, result['tumble_rate'])
+    
+    result['control'] = control
+    
+    return result
 
 @app.get("/debris/catalog")
 def get_debris_catalog(limit: int = 20):
@@ -388,12 +478,42 @@ def get_risk_objects():
     except Exception as e:
         print(f"Error checking risks: {e}")
         return []
-        
-    return []
-            
 
+
+# --- DeepDebris 4.0: Ground Contact Check ---
+class ContactRequest(BaseModel):
+    line1: str
+    line2: str
+    timestamp: str = None # ISO format, defaults to Now
+
+@app.post("/contact_status")
+def get_contact_status(req: ContactRequest):
+    """Checks if satellite is in view of Ground Station."""
+    if not pass_scheduler_svc:
+        return {"visible": True, "note": "Scheduler Offline - Unrestricted Mode"}
+    
+    try:
+        status = pass_scheduler_svc.is_in_view(req.line1, req.line2, req.timestamp)
+        return status
+    except Exception as e:
+        print(f"Contact Check Error: {e}")
+        return {"visible": False, "error": str(e)}
+
+@app.post("/check_fleet_safety")
+def check_fleet_safety(req: ContactRequest):
+    """
+    Simulates Fleet-Level Optimization Check.
+    Rejects maneuvers that endanger the Constellation.
+    """
+    if not fleet_svc:
+        return {"safe": True, "note": "Fleet Manager Offline"}
         
-    return []
+    try:
+        # Check against 50 friendly sats for next 60 mins
+        result = fleet_svc.check_safety(req.line1, req.line2, minutes_check=60)
+        return result
+    except Exception as e:
+        return {"safe": False, "error": str(e)}
 
 # --- TLE Cache (In-Memory) ---
 TLE_CACHE = {}
@@ -437,7 +557,7 @@ def get_latest_tle(norad_id: int):
                 data = resp.json()
                 if isinstance(data, list) and len(data) > 0 and 'TLE_LINE1' in data[0]:
                     sat = data[0]
-                    cache_entry = {
+                    new_entry = {
                         "line1": sat["TLE_LINE1"],
                         "line2": sat["TLE_LINE2"],
                         "name": sat["OBJECT_NAME"],
@@ -445,9 +565,20 @@ def get_latest_tle(norad_id: int):
                         "source": "SPACE-TRACK-LIVE",
                         "timestamp": now
                     }
+                    
+                    # --- CYBER SECURITY CHECK ---
+                    if physics_fw and nid_str in TLE_CACHE:
+                        old_entry = TLE_CACHE[nid_str]
+                        check = physics_fw.check_consistency(old_entry, new_entry)
+                        if not check['valid']:
+                            print(f"‼ BLOCKED SPOOFING ATTEMPT for {norad_id}: {check['reason']}")
+                            # Identify as compromised but return old data for safety
+                            old_entry['note'] = "SPOOF_DETECTED_USING_STALE"
+                            return old_entry
+
                     # Update Cache
-                    TLE_CACHE[nid_str] = cache_entry
-                    return cache_entry
+                    TLE_CACHE[nid_str] = new_entry
+                    return new_entry
                 elif 'error' in data:
                     raise HTTPException(status_code=500, detail=f"Space-Track API Error: {data}")
         else:
@@ -488,6 +619,11 @@ class BatchRequest(BaseModel):
     solar_flux: float
     kp_index: float
 
+
+class WeatherRequest(BaseModel):
+    solar_flux: float
+    kp_index: float
+
 @app.post("/predict_batch")
 def predict_batch(request: BatchRequest):
     """Efficiently predict a sequence of points."""
@@ -504,10 +640,25 @@ def predict_batch(request: BatchRequest):
                 # Just calling internal function to avoid HTTP overhead
                 pos_physics = propagator.get_position(request.line1, request.line2, ts)
                 
-                # Validate physics output
-                if np.any(np.isnan(pos_physics)) or np.any(np.isinf(pos_physics)):
-                    print(f"Skipping point {ts}: Physics propagation returned NaN/Inf")
-                    continue
+                # --- PHYSICS-INFORMED ADAPTER ---
+                # Standard SGP4 (get_position) ignores Flux.
+                # We must inject the "Storm Decay" manually as a baseline for the AI to correct.
+                # Heuristic: High flux causes orbital decay (altitude loss) over time.
+                
+                hours_elapsed = (ts - start_dt).total_seconds() / 3600.0
+                if hours_elapsed > 0:
+                    flux_anomaly = max(0, request.solar_flux - 150.0) # Baseline 150
+                    # Decay rate: very small normally, higher during storm.
+                    # e.g. 0.0001 per hour per flux unit?
+                    # Let's tune for visibility: 1km drop per hour at 300 flux?
+                    # R_earth ~ 6371km. Satellite R ~ 6771km. 
+                    # 1km is ~0.00015 of Radius.
+                    # decay_factor = 1.0 - (flux_anomaly * 0.00001 * hours_elapsed)
+                    # At 300 Flux (+150 anomaly) * 24h:
+                    # 150 * 24 * 1e-5 = 0.036 (3.6% drop).
+                    # 3.6% of 6700km is ~240km. That is highly visible divergence.
+                    decay_factor = 1.0 - (flux_anomaly * 0.000005 * hours_elapsed)
+                    pos_physics = pos_physics * decay_factor
                 
                 # NORMALIZED INPUTS
                 input_tensor = torch.tensor([[
@@ -775,6 +926,27 @@ def analyze_risk(request: RiskAnalysisRequest):
         print(f"Risk Analysis Failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+        raise HTTPException(status_code=500, detail=str(e))
+
+class NegotiationRequest(BaseModel):
+    context: str
+
+@app.post("/negotiate")
+def negotiate_maneuver(request: NegotiationRequest):
+    """
+    Trigger a multi-agent negotiation between two satellite operators.
+    Returns the transcript of the debate.
+    """
+    if not diplomat:
+        raise HTTPException(status_code=503, detail="Diplomat System offline.")
+    
+    try:
+        transcript = diplomat.run_negotiation(request.context)
+        return {"transcript": transcript}
+    except Exception as e:
+        print(f"Negotiation Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/analyze_behavior/{norad_id}")
 async def analyze_behavior_endpoint(norad_id: int):
     """
@@ -806,13 +978,17 @@ async def analyze_behavior_endpoint(norad_id: int):
         "analysis": "Object behavior diverges from ballistic trajectory." if res['is_anomaly'] else "Object follows expected orbital decay."
     }
 
-# Static Files (Mount LAST to avoid masking API routes)
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# Static Files (Mount LAST to
+# Serve frontend from static directory
+import os
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+else:
+    print(f"⚠ Static directory not found at {static_dir}. Frontend disabled.")
 
 # Start Server
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
 
 

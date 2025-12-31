@@ -14,13 +14,16 @@ import math
 
 class MockSatrec:
     """Mock Satellite object for simplified physics training."""
-    def __init__(self, r, v, epoch_offset=0.0):
+    def __init__(self, r, v, epoch_offset=0.0, q=None, w=None):
         self.r = np.array(r, dtype=np.float64)
         self.v = np.array(v, dtype=np.float64)
+        # Attitude State (Quaternion [w,x,y,z], Angular Velocity [x,y,z])
+        self.q = np.array(q if q is not None else [1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        self.w = np.array(w if w is not None else [0.0, 0.0, 0.0], dtype=np.float64)
         self.epoch_offset = epoch_offset
         self.is_mock = True
         
-    def update_state(self, current_time_offset, new_vel):
+    def update_state(self, current_time_offset, new_vel, new_w=None):
         """Update state (re-epoch) to apply a velocity change at a specific time."""
         # Calculate position at current time using OLD velocity
         dt = current_time_offset - self.epoch_offset
@@ -29,6 +32,8 @@ class MockSatrec:
         # Update state: New epoch starts now, at current_r, with new_vel
         self.r = current_r
         self.v = np.array(new_vel, dtype=np.float64)
+        if new_w is not None:
+            self.w = np.array(new_w, dtype=np.float64)
         self.epoch_offset = current_time_offset
 
 
@@ -50,6 +55,7 @@ class SpaceGym(gym.Env):
         4: Thrust Anti-Normal (-orbit plane perpendicular)
         5: Thrust Radial (+away from Earth)
         6: Thrust Anti-Radial (-toward Earth)
+        7: Engage Visual Servoing (Match Spin)
     
     Reward Function:
         +100 if miss distance > 10km (safe)
@@ -64,13 +70,15 @@ class SpaceGym(gym.Env):
     def __init__(self, sat_tle=None, debris_tle=None, tca=None, max_fuel=100.0):
         super().__init__()
         
-        # Action space: 7 discrete actions (wait + 6 thrust directions)
-        self.action_space = spaces.Discrete(7)
+        # Action space: 8 discrete actions (wait + 6 thrust + 1 servo)
+        self.action_space = spaces.Discrete(8)
         
-        # Observation space: [rel_pos(3), rel_vel(3), time_to_tca(1), fuel(1)]
+        # Observation space: 
+        # [rel_pos(3), rel_vel(3), rel_w(3), time_to_tca(1), fuel(1)]
+        # Total dims: 11
         self.observation_space = spaces.Box(
-            low=np.array([-10000, -10000, -10000, -10, -10, -10, 0, 0]),
-            high=np.array([10000, 10000, 10000, 10, 10, 10, 86400, 100]),
+            low=np.array([-10000, -10000, -10000, -10, -10, -10, -5, -5, -5, 0, 0]),
+            high=np.array([10000, 10000, 10000, 10, 10, 10, 5, 5, 5, 86400, 100]),
             dtype=np.float32
         )
         
@@ -133,8 +141,10 @@ class SpaceGym(gym.Env):
         self.current_step += 1
         self.sim_elapsed += self.dt
         
-        # Apply action (thrust maneuver)
-        if action > 0:  # action 0 is "wait"
+        # Apply action (thrust maneuver or servo)
+        if action == 7:
+            self._apply_visual_servo()
+        elif action > 0:  # action 0 is "wait"
             self._apply_thrust(action)
         
         # Get new observation
@@ -165,9 +175,18 @@ class SpaceGym(gym.Env):
         time_to_tca = (self.initial_tca_time - current_sim_time).total_seconds()
         
         # Construct observation
+        # Relative Angular Velocity
+        # If real Satrec, assume w=[0,0,0] (stabilized). If Mock, use state.
+        sat_w = getattr(self.sat_satrec, 'w', np.array([0.,0.,0.]))
+        deb_w = getattr(self.debris_satrec, 'w', np.array([0.1, 0.05, -0.02])) # Debris tumbles
+        
+        rel_w = deb_w - sat_w
+        
+        # Construct observation
         obs = np.array([
             rel_pos[0], rel_pos[1], rel_pos[2],
             rel_vel[0], rel_vel[1], rel_vel[2],
+            rel_w[0], rel_w[1], rel_w[2],
             time_to_tca,
             self.fuel_remaining
         ], dtype=np.float32)
@@ -185,7 +204,13 @@ class SpaceGym(gym.Env):
         
         reward = 0
         done = False
-        info = {'miss_distance_km': miss_distance / 1000}
+        
+        # Calculate spin match status
+        sat_w = getattr(self.sat_satrec, 'w', np.array([0.,0.,0.]))
+        deb_w = getattr(self.debris_satrec, 'w', np.array([0.1, 0.05, -0.02]))
+        w_error = np.linalg.norm(deb_w - sat_w)
+        
+        info = {'miss_distance_km': miss_distance / 1000, 'spin_error': w_error}
         
         # 1. SUCCESS: Safe Separation (> 10km)
         if miss_distance > 10000:
@@ -204,7 +229,15 @@ class SpaceGym(gym.Env):
              info['status'] = 'danger_zone'
         else:
              reward += 1 # Shaping encouragement
-             info['status'] = 'nominal'
+        
+        # REWARD AUGMENTATION: Visual Servoing
+        # If in "danger zone" (Close proximity), reward spin matching
+        if miss_distance < 1000:
+            if w_error < 0.01:
+                reward += 10 # Strong reward for matching spin close up
+                info['status'] = 'matching_spin'
+            else:
+                reward -= w_error * 10 # Penalty for tumbling relative to target
              
         # 3. FAILURE: Time Expired (Collision or Unsafe)
         if time_to_tca <= 0:
@@ -244,6 +277,33 @@ class SpaceGym(gym.Env):
         
         # Deduct fuel
         self.fuel_remaining -= self.fuel_cost_per_action
+
+    def _apply_visual_servo(self):
+        """Apply torque to match target spin (Visual Servoing)."""
+        # Determine target state (Debris w)
+        deb_w = getattr(self.debris_satrec, 'w', np.array([0.1, 0.05, -0.02]))
+        
+        # Current state
+        sat_w = getattr(self.sat_satrec, 'w', np.array([0.,0.,0.]))
+        
+        # Controller Logic (Simple P-Controller)
+        # Torque = Kp * error
+        # Effectively, we update w towards target w
+        alpha = 0.5 # Servo gain
+        new_w = sat_w + alpha * (deb_w - sat_w)
+        
+        # Update state
+        if hasattr(self.sat_satrec, 'is_mock'):
+             # We only update w, not r/v
+             self.sat_satrec.w = new_w
+        else:
+             # If real TLE, we convert to Mock to store state
+             # This is a bit tricky, similar to velocity update
+             sat_pos, sat_vel = self._propagate_satellite(self.sat_satrec, self.sim_elapsed)
+             self.sat_satrec = MockSatrec(sat_pos, sat_vel, epoch_offset=self.sim_elapsed, w=new_w)
+             
+        # Small fuel cost for AOCS (Attitude Control)
+        self.fuel_remaining -= 0.01
     
     def _action_to_thrust_vector(self, action, pos, vel):
         """Convert discrete action to thrust vector."""
@@ -360,6 +420,10 @@ class SpaceGym(gym.Env):
         # It's a valid approximation for short-term maneuver visualization (hours).
         new_sat = MockSatrec(curr_r, new_vel, epoch_offset=self.sim_elapsed)
         
+        # Preserve angular velocity if present
+        if hasattr(satrec, 'w'):
+            new_sat.w = satrec.w
+            
         return new_sat
     
     def _generate_random_scenario(self):
@@ -411,7 +475,8 @@ class SpaceGym(gym.Env):
         # And update _parse_tle to pass it through.
         
         sat_obj = MockSatrec(sat_r, sat_v)
-        deb_obj = MockSatrec(deb_r, deb_v)
+        # Give debris some tumble [0.1, 0.05, -0.02]
+        deb_obj = MockSatrec(deb_r, deb_v, w=[0.1, 0.05, -0.02])
         
         tca_dt = datetime.utcnow() + timedelta(seconds=t_collision)
         
@@ -451,7 +516,8 @@ def action_to_vector(action):
         3: "Normal (+Orbit Plane)",
         4: "Anti-Normal (-Orbit Plane)",
         5: "Radial (+Away from Earth)",
-        6: "Anti-Radial (-Toward Earth)"
+        6: "Anti-Radial (-Toward Earth)",
+        7: "Visual Servo (Match Spin)"
     }
     return action_names.get(action, "Unknown")
 

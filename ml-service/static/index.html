@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepDebris 2.0 | Mission Control</title>
+    <title>DeepDebris 4.0 | Mission Control</title>
     <link rel="stylesheet" href="css/style.css?v=4.1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -219,12 +219,53 @@
                     </button>
                 </div>
 
-                <h3 style="margin-top: 15px; font-size: 0.9rem; color: #ff0055;">Intelligence (Spy Hunter)</h3>
+                <!-- STEP 3: Detect Anomaly (Independent) -->
                 <button id="btn-spy-hunter" class="btn danger"
                     style="background: rgba(255, 0, 0, 0.2); border-color: #ff0000; width: 100%;"
                     title="Detect anomalous behavior patterns">
                     3. Detect Anomaly
                 </button>
+            </div>
+
+            <!-- DEEPDEBRIS 4.0: SERVICER VISION MODULE -->
+            <div class="control-group"
+                style="padding-top: 15px; margin-top: 15px; border-top: 1px solid rgba(0, 255, 136, 0.3);">
+                <label style="color: #00ff88; font-weight: bold;">
+                    <i class="fas fa-eye"></i> Servicer Vision (v4.0)
+                </label>
+
+                <!-- PiP Viewport -->
+                <div id="servicer-pip" style="
+                    width: 100%; 
+                    height: 150px; 
+                    background: #000; 
+                    border: 1px solid #00ff88; 
+                    margin-top: 10px; 
+                    position: relative;
+                    overflow: hidden;">
+                    <!-- Canvas will be injected here or generic overlay -->
+                    <div
+                        style="position: absolute; top: 5px; left: 5px; color: #00ff88; font-size: 10px; background: rgba(0,0,0,0.5); padding: 2px;">
+                        CAM-1 [ACTIVE]
+                    </div>
+                    <canvas id="servicer-canvas" width="300" height="150"
+                        style="width: 100%; height: 100%; object-fit: cover;"></canvas>
+                </div>
+
+                <!-- Synthetic Data Controls -->
+                <div style="display: flex; gap: 5px; margin-top: 10px;">
+                    <button id="btn-vision-capture" class="action-btn"
+                        style="flex: 1; background: #004400; font-size: 11px;">
+                        <i class="fas fa-camera"></i> Capture Frame
+                    </button>
+                    <button id="btn-vision-stream" class="action-btn"
+                        style="flex: 1; background: #002200; font-size: 11px;">
+                        <i class="fas fa-video"></i> Auto-Stream
+                    </button>
+                </div>
+                <div style="font-size: 10px; color: #aaa; margin-top: 5px;">
+                    Datasets Collected: <span id="dataset-count">0</span>
+                </div>
             </div>
 
         </aside>

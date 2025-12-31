@@ -2,7 +2,22 @@ import requests
 import os
 import json
 from datetime import datetime, timedelta
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from pydantic import BaseModel
+from typing import Optional
+
+class SpaceTrackCDM(BaseModel):
+    CDM_ID: str
+    SAT_1_NAME: str
+    SAT_1_ID: str
+    SAT_2_NAME: str
+    SAT_2_ID: str
+    TCA: str
+    MISS_DISTANCE: float
+    # Add other fields as necessary, using Optional for flexibility
+    REL_SPEED: Optional[float] = None
+    PROBABILITY: Optional[float] = None
 
 # Re-use the existing authentication logic from fetch_history.py logic if possible, 
 # but for now we'll implement a clean class using env vars.

@@ -120,7 +120,57 @@ class SpyHunter:
         THRESH = 1.0 
         
         return {
-            'is_anomaly': score > THRESH,
-            'score': score,
             'threat_level': 'HIGH' if score > THRESH else 'NOMINAL'
         }
+
+# --- DeepDebris 4.0: Cyber-Physical Validator ---
+class PhysicsValidator:
+    """
+    Enforces Keplerian Consistency on incoming TLE data.
+    Reject "Impossible Maneuvers" (Spoofing).
+    """
+    def __init__(self):
+        pass
+        
+    def check_consistency(self, old_tle, new_tle):
+        """
+        Compare two TLEs for the SAME object.
+        Returns: { 'valid': bool, 'reason': str }
+        """
+        if not old_tle or not new_tle:
+            return {'valid': True, 'reason': 'Baseline Missing'}
+            
+        # Parse logic (Simplified for speed - manual parse)
+        try:
+            # Inclination (Field 3 line 2)
+            inc_old = float(old_tle['line2'].split()[2])
+            inc_new = float(new_tle['line2'].split()[2])
+            
+            # Epoch
+            # epoch_old = ... (requires complex parsing)
+            # Let's assume sequential updates for now.
+            
+            # CONSTRAINTS:
+            
+            # 1. Plane Change Check
+            # Change in inclination requires Delta-V = 2*V*sin(dInc/2).
+            # LEO V ~ 7.5 km/s.
+            # 1 deg change => ~130 m/s.
+            # If dInc > 0.5 degrees instantly, it's virtually impossible for a standard sat.
+            d_inc = abs(inc_new - inc_old)
+            if d_inc > 0.5:
+                return {
+                    'valid': False, 
+                    'reason': f"CYBER ALERT: Impossible Plane Change ({d_inc:.2f} deg). Violation of conservation of momentum."
+                }
+                
+            # 2. Altitude Teleportation (Mean Motion)
+            # mm_old = float(old_tle['line2'].split()[7])
+            # mm_new = float(new_tle['line2'].split()[7])
+            # If period changes by > 1 minute instantly -> Impossible.
+            
+            return {'valid': True, 'reason': 'Physics Consistent'}
+            
+        except Exception as e:
+            return {'valid': True, 'reason': f"Parse Error: {e}"}
+

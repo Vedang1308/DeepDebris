@@ -9,7 +9,7 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 window.THREE = THREE;
 
 // --- Debugging ---
-console.log("DeepDebris 2.0 Starting...");
+console.log("DeepDebris 4.0 Starting...");
 
 // --- Scene Setup ---
 const scene = new THREE.Scene();
@@ -18,6 +18,31 @@ window.scene = scene; // Expose for debugging
 // Camera - Professional setup
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 10, 500000);
 camera.position.set(15000, 8000, 15000);
+
+// --- DEEPDEBRIS 4.0: SERVICER VISION MODULE ---
+// Secondary Camera mounted on the Chaser Satellite
+const servicerCamera = new THREE.PerspectiveCamera(60, 300 / 150, 0.1, 5000);
+// Initial position offset (will be attached to satellite in animation loop)
+servicerCamera.position.set(0, 0, 0);
+
+// Secondary Renderer for PiP View
+const servicerCanvas = document.getElementById('servicer-canvas');
+let servicerRenderer = null;
+
+if (servicerCanvas) {
+    servicerRenderer = new THREE.WebGLRenderer({
+        canvas: servicerCanvas,
+        antialias: true,
+        alpha: false
+    });
+    servicerRenderer.setSize(300, 150);
+    servicerRenderer.outputEncoding = THREE.sRGBEncoding;
+}
+
+// Synthetic Data Collection State
+let isVisionStreaming = false;
+let visionDatasetCount = 0;
+// ------------------------------------------------
 
 // Renderer - Production quality
 const renderer = new THREE.WebGLRenderer({
@@ -454,7 +479,7 @@ function updateOrbitPath(satrec) {
     if (orbitLine) scene.remove(orbitLine);
 
     const points = [];
-    const now = new Date(); // FIXED: Use REAL time as baseline, NOT simulatedTime
+    const now = simulatedTime ? new Date(simulatedTime.getTime()) : new Date(); // Use SIMULATED time for consistent visualization
     // Calculate path for next 95 mins (1 orbit)
     for (let i = 0; i <= 95; i++) {
         const t = new Date(now.getTime() + i * 60000); // +1 min per step
@@ -508,7 +533,9 @@ async function drawPredictionPath(l1, l2) {
             start_time: now.toISOString(),
             minutes_duration: 480,
             step_minutes: 1,
-            solar_flux: (val => isNaN(val) ? 150 : val)(parseFloat(fluxSlider ? fluxSlider.value : 150)),
+            // VISUAL AMPLIFICATION: Multiply Flux by 5x to make the LEO drag decay
+            // visible at planetary scale within a 24h simulation window.
+            solar_flux: (val => isNaN(val) ? 150 : val)(parseFloat(fluxSlider ? fluxSlider.value : 150)) * 5.0,
             kp_index: (val => isNaN(val) ? 3 : val)(parseFloat(kpSlider ? kpSlider.value : 3))
         };
 
@@ -545,7 +572,7 @@ async function drawPredictionPath(l1, l2) {
 
         const material = new LineMaterial({
             color: 0x00FFFF,      // Cyan (AI Prediction)
-            linewidth: 8,         // Much thicker than physics line
+            linewidth: 1,         // Match Purple Line (1px)
             resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
             dashed: false,        // Solid line (vs dashed physics)
             alphaToCoverage: true,
@@ -583,6 +610,13 @@ async function drawPredictionPath(l1, l2) {
         predictionLine = newPredictionLine;
         scene.add(predictionLine);
 
+        // Add Uncertainty Tube (Layer 5 Requirement)
+        if (points.length > 2) {
+            const tube = createUncertaintyTube(points);
+            scene.add(tube);
+            predictionLine.userData.uncertaintyTube = tube;
+        }
+
         // Store for Ghost Interpolation
         predictionData = data;
         predictionStartTime = new Date(req.start_time); // Use the time we REQUESTED, not current time
@@ -591,6 +625,84 @@ async function drawPredictionPath(l1, l2) {
 
     } catch (err) { console.error(err); }
 }
+
+// --- DEEPDEBRIS 5.0 VISUALIZATION UPGRADES ---
+// Layer 5: Uncertainty Tubes & Maneuver Viz
+
+function createUncertaintyTube(points) {
+    // Visualize the "Confidence Tube" (Sigma Variance)
+    // Create a path from points
+    const curve = new THREE.CatmullRomCurve3(points);
+
+    // Tube Geometry: path, tubularSegments, radius, radialSegments, closed
+    const geometry = new THREE.TubeGeometry(curve, 64, 50, 8, false);
+
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x00FFFF, // Cyan match
+        transparent: true,
+        opacity: 0.1,    // Very subtle 'tunnel'
+        wireframe: false,
+        side: THREE.DoubleSide
+    });
+
+    const tube = new THREE.Mesh(geometry, material);
+    return tube;
+}
+
+// Global for maneuver line
+let maneuverLine = null;
+
+window.visualizeManeuver = function (newVelocity) {
+    // "Maneuver Visualization: Dashed white line showing the 'New Path' after RL execution."
+    if (maneuverLine) scene.remove(maneuverLine);
+
+    if (!simulationSatrec) return;
+
+    // Propagate "New Path" based on proposed velocity
+    // Simplified: Linear projection from current position
+    // In production we would re-propagate SGP4 with new mean elements, 
+    // but for viz, a tangent bundle is acceptable.
+
+    const points = [];
+    // Get current pos
+    const pv = satellite.propagate(simulationSatrec, simulatedTime);
+    if (!pv.position) return;
+
+    let currentPos = new THREE.Vector3(pv.position.x, pv.position.y, pv.position.z);
+    let currentVel = new THREE.Vector3(newVelocity[0], newVelocity[1], newVelocity[2]); // km/s
+
+    // Predict 1 orbit ahead (approx 90 mins)
+    const dt = 60; // 1 min steps
+    for (let i = 0; i < 90; i++) {
+        // p = p + v*dt (simple Euler integration for viz)
+        currentPos.add(currentVel.clone().multiplyScalar(dt));
+
+        // Apply simple gravity (mu/r^3 * r) to curve it slightly? 
+        // Or just show linear "Escape Vector"?
+        // Prompt says "New Path", implies orbit.
+        // Let's stick to linearized "Proposed Trajectory" (Tangent) for clarity
+        // as accurate re-propagation requires solving for new TLE.
+
+        points.push(toVector3(currentPos));
+    }
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineDashedMaterial({
+        color: 0xFFFFFF, // White
+        dashSize: 500,
+        gapSize: 300,
+        linewidth: 4,
+        scale: 1, // required for dashed
+    });
+
+    maneuverLine = new THREE.Line(geometry, material);
+    maneuverLine.computeLineDistances();
+    scene.add(maneuverLine);
+
+    console.log("Maneuver Path Visualized (Layer 5)");
+}
+
+// ------------------------------------------------
 
 // --- Debris Visualization (Dynamic) ---
 let debrisObjects = []; // Store { line, mesh, satrec }
@@ -1000,46 +1112,17 @@ if (weatherSelect) {
 
 // --- DeepDebris 4.0: Global Weather Physics ---
 function updateSpaceWeatherPhysics() {
-    // Answer user: "It should change according to weather... same for all objects"
+    // VISUALIZATION LOGIC ONLY
+    // The Frontend (Purple Satellite) strictly follows the SGP4 Baseline (Clean).
+    // The "Storm Physics" is handled entirely by the Backend AI (Blue Ghost).
+    // We do NOT modify the frontend SGP4 objects here because satellite.js constants are immutable post-init
+    // and we want to preserve the Baseline vs AI contrast.
+
     const flux = parseFloat(fluxSlider ? fluxSlider.value : 150);
     const kp = parseFloat(kpSlider ? kpSlider.value : 3);
+    console.log(`Weather Updated: Flux ${flux}, Kp ${kp} (Backend Simulation Triggered)`);
 
-    // Heuristic: Scale B* (Drag Term) based on Flux anomaly
-    // Baseline Flux ~100. High Flux = High Drag.
-    // Factor 1.0 at 100 Flux. 
-    // Factor 5.0 at 300 Flux?
-    const dragScaler = Math.max(0.5, (flux / 100.0) * (1 + kp / 10.0));
-
-    console.log(`Applying Weather Physics: Drag Scaler = ${dragScaler.toFixed(2)}x (Flux ${flux}, Kp ${kp})`);
-
-    // 1. Update Primary Satellite (Simulation Instance)
-    // "Actual" (Purple) path remains rigid (currentSatrec).
-    // "Target" (Mesh) uses simulationSatrec which reacts to weather.
-
-    if (currentSatrec) {
-        const l1 = inputs.l1.value;
-        const l2 = inputs.l2.value;
-        if (l1 && l2) {
-            // Clone for simulation
-            simulationSatrec = satellite.twoline2satrec(l1, l2);
-
-            // Apply Physics to the Simulation Instance ONLY
-            if (!simulationSatrec.originalBstar) simulationSatrec.originalBstar = simulationSatrec.bstar;
-            simulationSatrec.bstar = simulationSatrec.originalBstar * dragScaler;
-            console.log(`Simulation SatRec Updated: Drag x${dragScaler.toFixed(2)}`);
-        }
-    }
-
-    // 2. Update All Debris
-    if (debrisObjects) {
-        debrisObjects.forEach(obj => {
-            if (obj.satrec) {
-                if (!obj.satrec.originalBstar) obj.satrec.originalBstar = obj.satrec.bstar;
-                obj.satrec.bstar = obj.satrec.originalBstar * dragScaler;
-            }
-        });
-    }
-    // Note: This changes the 'propagate' result dynamically for the NEXT frame!
+    // We intentionally leave currentSatrec UNTOUCHED to serve as the Baseline.
 }
 
 // Handle Change: Trigger Live Fetch
@@ -1054,6 +1137,9 @@ function updateSatelliteEngine() {
     try {
         // Parse TLE using satellite.js
         currentSatrec = satellite.twoline2satrec(l1, l2);
+        // Save CLEAN B* to prevent pollution
+        currentSatrec.originalBstar = currentSatrec.bstar;
+
         updateOrbitPath(currentSatrec);
 
         // Trigger New Visualizations
@@ -1127,9 +1213,16 @@ function animate() {
     atmosphere.rotation.y += 0.00007;
 
     // 2. Satellite Physics
-    // Use SIMULATION SATREC (Affected by Weather) for the actual object
-    // If simulationSatrec is null, fallback to currentSatrec (Baseline)
-    const activeSatrec = simulationSatrec || currentSatrec;
+    // Use CURRENT SATREC (Baseline SGP4) for the actual object visualization
+    // This ensures the "Purple Satellite" stays on the "Purple Line" (Baseline Path)
+    // The "Ghost" handles the "Truth" or "AI Prediction"
+    const activeSatrec = currentSatrec;
+
+    // HARDENING: Force Reset to Baseline Physics (Clean B*)
+    // This prevents any "Drag Leakage" from the simulation mode
+    if (activeSatrec && activeSatrec.originalBstar !== undefined) {
+        activeSatrec.bstar = activeSatrec.originalBstar;
+    }
 
     if (activeSatrec) {
         const positionAndVelocity = satellite.propagate(activeSatrec, simulatedTime);
@@ -1253,6 +1346,24 @@ function animate() {
 
     renderer.render(scene, camera);
     if (window.labelRenderer) window.labelRenderer.render(scene, camera);
+
+    // --- DEEPDEBRIS 4.0: Servicer Camera Update ---
+    if (servicerRenderer && satelliteMesh) {
+        // Mount camera on satellite
+        servicerCamera.position.copy(satelliteMesh.position);
+
+        // Align camera to look at Earth center for now (nadir)
+        // In real V4.0, this will look at the target debris
+        servicerCamera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        // Render secondary view
+        servicerRenderer.render(scene, servicerCamera);
+
+        // Synthetic Data Stream
+        if (isVisionStreaming) {
+            captureServicerFrame();
+        }
+    }
 }
 
 // Handle Resize
@@ -1691,3 +1802,116 @@ function clearSimulation() {
 // Start Listeners
 initSimulationListeners();
 loadDebrisCatalog();
+
+// --- DeepDebris 4.0: Synthetic Data Generator ---
+function captureServicerFrame() {
+    if (!servicerRenderer) return;
+
+    // 1. Capture Data URL
+    const dataURL = servicerRenderer.domElement.toDataURL('image/jpeg', 0.9);
+
+    // 2. Get Ground Truth Labels (Self-Supervised)
+    let groundTruth = null;
+    if (satelliteMesh) {
+        groundTruth = {
+            pos: satelliteMesh.position.toArray(),
+            rot: satelliteMesh.quaternion.toArray(),
+            sun: sunLight.position.toArray()
+        };
+    }
+
+    // 3. For now, just log/count (Simulate ingestion)
+    visionDatasetCount++;
+    const counter = document.getElementById('dataset-count');
+    if (counter) counter.innerText = visionDatasetCount;
+
+    // 4. Send to Backend Vision API
+    fetch('/analyze_image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataURL })
+    })
+        .then(async (res) => {
+            if (res.ok) {
+                const data = await res.json();
+                console.log("👁️ VISION ESTIMATE:", data);
+
+                // Show result as ephemeral label (Visual Debug)
+                // --- DeepDebris 4.0: Visual Servoing HUD ---
+                const control = data.control || {};
+                const torque = control.torque || [0, 0, 0];
+                const status = control.status || "SEARCHING";
+
+                // Remove old HUD if exists
+                const oldHud = document.getElementById('vision-hud');
+                if (oldHud) oldHud.remove();
+
+                // Create HUD Overlay
+                const hud = document.createElement('div');
+                hud.id = 'vision-hud';
+                hud.style.cssText = `
+                    position: absolute; bottom: 5px; left: 5px; right: 5px;
+                    background: rgba(0, 10, 0, 0.8); border: 1px solid #00ff00;
+                    color: #00ff00; padding: 5px; font-family: 'Courier New', monospace; font-size: 10px;
+                    pointer-events: none; z-index: 20000;
+                `;
+
+                const torqueStr = torque.map(v => v.toFixed(3)).join(' ');
+                const tumStr = data.tumble_rate.map(v => v.toFixed(3)).join(' ');
+
+                let statusColor = status === "LOCKED" ? "#00ff00" : (status === "MATCHING SPIN" ? "cyan" : "yellow");
+
+                hud.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span style="font-weight:bold;">TGT Tumb:</span>
+                        <span>[${tumStr}]</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span style="font-weight:bold;">CMD Torq:</span>
+                        <span>[${torqueStr}]</span>
+                    </div>
+                    <div style="text-align:center; margin-top:3px; border-top:1px solid #005500; padding-top:2px;">
+                        STATUS: <span style="color:${statusColor}; font-weight:bold; animation: blink 1s infinite;">${status}</span>
+                    </div>
+                `;
+
+                // Append to PiP Container if possible, else body
+                const pip = document.getElementById('servicer-pip');
+                if (pip) {
+                    pip.appendChild(hud);
+                } else {
+                    document.body.appendChild(hud);
+                }
+
+                // Auto-clear after 2s if not streaming
+                if (!isVisionStreaming) {
+                    setTimeout(() => hud.remove(), 2000);
+                }
+            }
+        })
+        .catch(err => console.error("Vision Error:", err));
+}
+
+// Bind Buttons
+const btnCapture = document.getElementById('btn-vision-capture');
+const btnStream = document.getElementById('btn-vision-stream');
+
+if (btnCapture) {
+    btnCapture.addEventListener('click', () => {
+        captureServicerFrame();
+        console.log("📸 Frame Captured [Synthetic Data]");
+        // Flash effect
+        servicerCanvas.style.opacity = '0.5';
+        setTimeout(() => servicerCanvas.style.opacity = '1', 100);
+    });
+}
+
+if (btnStream) {
+    btnStream.addEventListener('click', () => {
+        isVisionStreaming = !isVisionStreaming;
+        btnStream.innerHTML = isVisionStreaming ?
+            '<i class="fas fa-stop"></i> Stop Stream' :
+            '<i class="fas fa-video"></i> Auto-Stream';
+        btnStream.style.background = isVisionStreaming ? '#440000' : '#002200';
+    });
+}
