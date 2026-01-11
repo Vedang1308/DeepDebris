@@ -30,7 +30,9 @@ try:
         print("✅ Login Success (HTTP 200)")
         # Verify Session by fetching a TLE
         print("Fetching Test TLE (ISS)...")
-        query = "https://www.space-track.org/basicspacedata/query/class/tle_latest/NORAD_CAT_ID/25544/orderby/ORDINAL desc/format/json"
+        # DEPRECATED: query = "https://www.space-track.org/basicspacedata/query/class/tle_latest/NORAD_CAT_ID/25544/orderby/ORDINAL desc/format/json"
+        # NEW: use class/gp which returns latest SGP4 TLE by default
+        query = "https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/25544/orderby/EPOCH desc/format/json"
         resp = session.get(query)
         if resp.status_code == 200:
             data = resp.json()

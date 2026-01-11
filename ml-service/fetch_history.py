@@ -27,8 +27,10 @@ def fetch_history():
     
     date_range = f"{start_date.strftime('%Y-%m-%d')}--{end_date.strftime('%Y-%m-%d')}"
     
-    # Query: TLEs for ISS in date range
-    query = f"{base_query}/class/tle/NORAD_CAT_ID/{NORAD_ID}/EPOCH/{date_range}/orderby/EPOCH asc/format/json"
+    # Query: Get TLE history for last N days
+    # DEPRECATED: class/tle...
+    # NEW: class/gp_history...
+    query = f"{base_query}/class/gp_history/NORAD_CAT_ID/{NORAD_ID}/EPOCH/{date_range}/orderby/EPOCH asc/format/json"
     
     session = requests.Session()
     

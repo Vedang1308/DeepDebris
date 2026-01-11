@@ -92,8 +92,8 @@ def refresh_data_cache():
         if SPACETRACK_USER and SPACETRACK_PASSWORD:
              session = requests.Session()
              login_url = "https://www.space-track.org/ajaxauth/login"
-             # Fetch LAST 2 TLEs
-             query = f"https://www.space-track.org/basicspacedata/query/class/tle/NORAD_CAT_ID/{nid}/orderby/EPOCH desc/limit/2/format/json"
+             # Fetch LAST 2 TLEs - Use gp_history for history access
+             query = f"https://www.space-track.org/basicspacedata/query/class/gp_history/NORAD_CAT_ID/{nid}/orderby/EPOCH desc/limit/2/format/json"
              
              resp = session.post(login_url, data={"identity": SPACETRACK_USER, "password": SPACETRACK_PASSWORD})
              if resp.status_code == 200:
@@ -363,7 +363,8 @@ def get_debris_catalog(limit: int = 20):
         session = requests.Session()
         login_url = "https://www.space-track.org/ajaxauth/login"
         # Query: Latest TLE for top N debris objects in LEO
-        query = f"https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/OBJECT_TYPE/DEBRIS/MEAN_MOTION/>11.25/orderby/EPOCH desc/limit/{limit}/format/json"
+        # Use class/gp (replaces tle_latest)
+        query = f"https://www.space-track.org/basicspacedata/query/class/gp/OBJECT_TYPE/DEBRIS/MEAN_MOTION/>11.25/orderby/EPOCH desc/limit/{limit}/format/json"
         
         resp = session.post(login_url, data={"identity": SPACETRACK_USER, "password": SPACETRACK_PASSWORD})
         if resp.status_code != 200:
@@ -516,7 +517,8 @@ def get_latest_tle(norad_id: int):
         print(f"Fetching real TLE for {norad_id}...")
         session = requests.Session()
         login_url = "https://www.space-track.org/ajaxauth/login"
-        query = f"https://www.space-track.org/basicspacedata/query/class/tle_latest/NORAD_CAT_ID/{norad_id}/orderby/ORDINAL desc/format/json"
+        # Use class/gp for latest TLE
+        query = f"https://www.space-track.org/basicspacedata/query/class/gp/NORAD_CAT_ID/{norad_id}/orderby/EPOCH desc/format/json"
         
         resp = session.post(login_url, data={"identity": SPACETRACK_USER, "password": SPACETRACK_PASSWORD})
         if resp.status_code == 200:
